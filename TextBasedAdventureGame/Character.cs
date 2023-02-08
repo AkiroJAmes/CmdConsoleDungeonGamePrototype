@@ -53,7 +53,8 @@ namespace TextBasedAdventureGame
         public int GetEXP() { return EXP; }
 
         public void WriteStats() {
-            Console.WriteLine();
+            // Make sure the line is clear
+            Console.WriteLine("\r                                     ");
             Console.Write($"Level: {LVL} | EXP: {EXP} / {LVL * 10} | ");
             Console.Write($"HP{HP} : AT{AT} : DF{DF}");
         }

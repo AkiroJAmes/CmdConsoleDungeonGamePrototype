@@ -14,6 +14,8 @@ namespace TextBasedAdventureGame
         static Enemy[] e;
         static Player p;
 
+        static ConsoleKey playerInput;
+
         static Timer timer;
         static bool currentlyDrawing;
 
@@ -31,39 +33,22 @@ namespace TextBasedAdventureGame
             Console.CursorVisible = false;
 
             while (true) {
-
-
-/*                Console.WriteLine($"Enter the height of the dungeon:");
-                try {
-                    if (rowUserInputSize < 1) continue;
-                    rowUserInputSize += Convert.ToInt32(Console.ReadLine()); 
-                } catch { Console.Clear(); continue; }
-
-                Console.WriteLine($"Enter the width of the dungeon:");
-                try { 
-                    if(colUserInputSize < 1) continue;
-                    colUserInputSize += Convert.ToInt32(Console.ReadLine()); 
-                } catch { Console.Clear(); continue; }*/
-
                 gameState = GameState.InDungeon;
 
                 Console.Clear();
 
                 map = new Room[rowUserInputSize, colUserInputSize];
-
                 CreateDungeonRooms();
 
-                var r = new Random();
 
+                var r = new Random();
                 p = new Player(5, 10, 2, 1, 0);
                 e = new Enemy[r.Next(2, 4)];
                 PowerUp[] pu = new PowerUp[r.Next(1, 2)];
                 PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
 
                 AddGameObjects(pu, pui);
-
                 InitTimer();
-
                 GameLoop(pu, pui);
 
                 break;
@@ -72,131 +57,138 @@ namespace TextBasedAdventureGame
 
         private static void GameLoop(PowerUp[] pu, PickUpItem[] pui)
         {
-            while (true) {
-                PlayerAction();
-            }
+            PlayerAction();
         }
 
         static void PlayerAction() {
             Vector2 newPlayerPosition = Vector2.Zero;
             Vector2 playerPositionLastTurn = Vector2.Zero;
 
-            bool playerTurn;
+            while (true) {
+                if(gameState == GameState.InDungeon) { 
+                    DrawMainDungeonScreen();
 
-            do {
-                gameState = GameState.InDungeon;
-                playerTurn = false;
+                    var pPosition = p.GetGameObjectPosition();
 
-                if(!currentlyDrawing) {
-                    currentlyDrawing = true;
+                    var actionUserInput = Console.ReadKey().Key;
 
-                    Console.SetCursorPosition(0, 0);
-                    DrawDungeon();
-                    p.WriteStats();
-                    WriteControls();
-
-                    currentlyDrawing = false;
-                }
-
-                if(currentlyDrawing) {
-                    while (true)
+                    switch (actionUserInput)
                     {
-                        if (!currentlyDrawing) break;
+                        case ConsoleKey.UpArrow:
+                        case ConsoleKey.W:
+                            newPlayerPosition = new Vector2(pPosition.X, pPosition.Y - 1);
+                            break;
+                        case ConsoleKey.DownArrow:
+                        case ConsoleKey.S:
+                            newPlayerPosition = new Vector2(pPosition.X, pPosition.Y + 1);
+                            break;
+                        case ConsoleKey.RightArrow:
+                        case ConsoleKey.D:
+                            newPlayerPosition = new Vector2(pPosition.X + 1, pPosition.Y);
+                            break;
+                        case ConsoleKey.LeftArrow:
+                        case ConsoleKey.A:
+                            newPlayerPosition = new Vector2(pPosition.X - 1, pPosition.Y);
+                            break;
+/*                        case ConsoleKey.X:
+                        case ConsoleKey.E:
+                            PlayerInventory();
+                            Console.Clear();
+                            continue;
+                        case ConsoleKey.Z:
+                        case ConsoleKey.F:
+                            PickUpNewItem(pPosition);
+                            Console.Clear();
+                            continue;*/
                     }
 
-                    currentlyDrawing = true;
+                    // Check if new player position is valid
+                    var mapPosition = map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y];
 
-                    Console.SetCursorPosition(0, 0);
-                    DrawDungeon();
-                    p.WriteStats();
-                    WriteControls();
-
-                    currentlyDrawing = false;
-                }
-
-                var pPosition = p.GetGameObjectPosition();
-
-                var actionUserInput = Console.ReadKey().Key;
-
-                switch (actionUserInput)
-                {
-                    case ConsoleKey.UpArrow:
-                    case ConsoleKey.W:
-                        newPlayerPosition = new Vector2(pPosition.X, pPosition.Y - 1);
-                        break;
-                    case ConsoleKey.DownArrow:
-                    case ConsoleKey.S:
-                        newPlayerPosition = new Vector2(pPosition.X, pPosition.Y + 1);
-                        break;
-                    case ConsoleKey.RightArrow:
-                    case ConsoleKey.D:
-                        newPlayerPosition = new Vector2(pPosition.X + 1, pPosition.Y);
-                        break;
-                    case ConsoleKey.LeftArrow:
-                    case ConsoleKey.A:
-                        newPlayerPosition = new Vector2(pPosition.X - 1, pPosition.Y);
-                        break;
-                    case ConsoleKey.X:
-                    case ConsoleKey.E:
-                        PlayerInventory();
-                        Console.Clear();
-                        continue;
-                    case ConsoleKey.Z:
-                    case ConsoleKey.F:
-                        PickUpNewItem(pPosition);
-                        Console.Clear();
-                        continue;
-/*                    default:
-                        Console.WriteLine("Please enter a valid action");
+                    if (!mapPosition.CheckIfEmpty() && mapPosition.CheckIfWall()) {
+/*                        Console.WriteLine($"You attempted to move to {newPlayerPosition} but there is a wall there");
                         Console.ReadKey();
-                        Console.SetCursorPosition(0, 0);
-                        playerTurn = true;
-                        continue;*/
-                }
+                        Console.SetCursorPosition(0, 0);*/
+                        continue;
+                    }
 
-                // Check if new player position is valid
-                var mapPosition = map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y];
-
-                if (!mapPosition.CheckIfEmpty() && mapPosition.CheckIfWall()) {
-                    Console.WriteLine($"You attempted to move to {newPlayerPosition} but there is a wall there");
-                    Console.ReadKey();
-                    Console.SetCursorPosition(0, 0);
-                    playerTurn = true;
-                    continue;
-                }
-
-                switch (actionUserInput) {
-                    case ConsoleKey.UpArrow:
-                    case ConsoleKey.W:
-                    case ConsoleKey.DownArrow:
-                    case ConsoleKey.S:
-                    case ConsoleKey.RightArrow:
-                    case ConsoleKey.D:
-                    case ConsoleKey.LeftArrow:
-                    case ConsoleKey.A:
-                        map[(int)pPosition.X, (int)pPosition.Y].RemoveGameObject(p);
-                        map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y].AddGameObject(p, (int)newPlayerPosition.X, (int)newPlayerPosition.Y);
-                        break;
-                }
+                    switch (actionUserInput) {
+                        case ConsoleKey.UpArrow:
+                        case ConsoleKey.W:
+                        case ConsoleKey.DownArrow:
+                        case ConsoleKey.S:
+                        case ConsoleKey.RightArrow:
+                        case ConsoleKey.D:
+                        case ConsoleKey.LeftArrow:
+                        case ConsoleKey.A:
+                            map[(int)pPosition.X, (int)pPosition.Y].RemoveGameObject(p);
+                            map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y].AddGameObject(p, (int)newPlayerPosition.X, (int)newPlayerPosition.Y);
+                            break;
+                    }
 
                 
-                if (!mapPosition.CheckIfEmpty()) {
-                    GameObject e = mapPosition.CheckIfEnemy();
-                    if (e != null) {
-                        Console.SetCursorPosition(0, 0);
-                        DrawDungeon();
-                        p.WriteStats();
-                        WriteControls();
-                        Console.Write("You ran into an enemy!");
+/*                    if (!mapPosition.CheckIfEmpty()) {
+                        GameObject e = mapPosition.CheckIfEnemy();
+                        if (e != null) {
+                            Console.SetCursorPosition(0, 0);
+                            DrawDungeon();
+                            p.WriteStats();
+                            WriteControls();
+                            Console.Write("You ran into an enemy!");
 
-                        Console.ReadKey();
+                            Console.ReadKey();
 
-                        FightSequence(p, e, p);
-                    }
+                            FightSequence(p, e, p);
+                        }
+                    }*/
+
+                    Console.SetCursorPosition(0, 0);
+                }
+            }
+        }
+
+        private static readonly object myLock = new object();
+
+        private static void DrawMainDungeonScreen()
+        {
+            lock (myLock) {
+                Console.SetCursorPosition(0, 0);
+                DrawDungeon();
+                p.WriteStats();
+                WriteControls();
+            }
+/*            // Buffer draw calls made to ensure no draws are overlapped
+
+            if (!currentlyDrawing) {
+                currentlyDrawing = true;
+
+
+
+                // Very very small wait to ensure write has time to finish to avoid artifacts
+                Thread.Sleep(1);
+
+                currentlyDrawing = false;
+                return;
+            }
+
+            if (currentlyDrawing)
+            {
+                while (true) {
+                    if (!currentlyDrawing) break;
                 }
 
+                currentlyDrawing = true;
+
                 Console.SetCursorPosition(0, 0);
-            } while (playerTurn);
+                DrawDungeon();
+                p.WriteStats();
+                WriteControls();
+
+                Thread.Sleep(1);
+
+                currentlyDrawing = false;
+                return;
+            }*/
         }
 
         private static void EnemyAction()
@@ -241,7 +233,7 @@ namespace TextBasedAdventureGame
                     map[(int)currentPosition.X, (int)currentPosition.Y].RemoveGameObject(enemy);
                     map[(int)newPosition.X, (int)newPosition.Y].AddGameObject(enemy, (int)newPosition.X, (int)newPosition.Y);
 
-                    if(playerPosition == newPosition) {
+/*                    if(playerPosition == newPosition) {
                         Console.SetCursorPosition(0, 0);
                         DrawDungeon();
                         p.WriteStats();
@@ -249,7 +241,7 @@ namespace TextBasedAdventureGame
                         Console.Write("An enemy ran into you!");
 
                         FightSequence(p, enemy, enemy);
-                    }
+                    }*/
                 }
             }
         }
@@ -257,15 +249,18 @@ namespace TextBasedAdventureGame
         private static void FightSequence(Player player, GameObject enemy, GameObject advantage)
         {
             gameState = GameState.InBattle;
-            Console.Clear();
-            Console.Write($"Fighting enemy {enemy.GetName()}, {advantage.GetName()} has the advantage ");
-            Console.WriteLine($"{player.GetGameObjectPosition()}, {enemy.GetGameObjectPosition()}");
-            Console.ReadKey();
+            while (true)
+            {
+                Console.Clear();
+                Console.Write($"Fighting enemy {enemy.GetName()}, {advantage.GetName()} has the advantage ");
+                Console.WriteLine($"{player.GetGameObjectPosition()}, {enemy.GetGameObjectPosition()}");
+                Console.ReadKey();
 
-            var mapPosition = player.GetGameObjectPosition();
-            map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
-            enemy.SetHP(0);
-            Console.Clear();
+                var mapPosition = player.GetGameObjectPosition();
+                map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
+                enemy.SetHP(0);
+                Console.Clear();
+            }
         }
 
         static void PlayerInventory() {
@@ -422,48 +417,22 @@ namespace TextBasedAdventureGame
         }
 
         static void WriteControls() {
-            Console.WriteLine("\n");
+            Console.WriteLine("                                         \n");
             Console.BackgroundColor = ConsoleColor.White;
             Console.ForegroundColor = ConsoleColor.Black;
-            Console.WriteLine("   W    E < inventory ");
-            Console.WriteLine(" A S D    F < pickup  ");
+            Console.WriteLine("   W    E < inventory \n A S D    F < pickup  ");
             Console.ResetColor();
         }
 
         static void InitTimer() {
-            timer = new Timer(TimerCallback, null, 0, 500);
+            timer = new Timer(TimerCallback, null, 0, 1000);
 
         }
 
         static void TimerCallback(Object stateinfo) {
             if(gameState == GameState.InDungeon) { 
                 EnemyAction();
-
-                if(!currentlyDrawing) {
-                    currentlyDrawing = true;
-
-                    Console.SetCursorPosition(0, 0);
-                    DrawDungeon();
-                    p.WriteStats();
-                    WriteControls();
-
-                    currentlyDrawing = false;
-                }
-
-                if(currentlyDrawing) {
-                    while (true) {
-                        if (!currentlyDrawing) break;
-                    }
-
-                    currentlyDrawing = true;
-
-                    Console.SetCursorPosition(0, 0);
-                    DrawDungeon();
-                    p.WriteStats();
-                    WriteControls();
-
-                    currentlyDrawing = false;
-                }
+                DrawMainDungeonScreen();
             }
         }
     }
