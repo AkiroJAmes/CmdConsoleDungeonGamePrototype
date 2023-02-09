@@ -56,6 +56,10 @@ namespace TextBasedAdventureGame
             return true;
         }
 
+        public GameObject[] GetGameObjects() {
+            return objects;
+        }
+
         public GameObject CheckIfItem() {
             for (int i = 0; i < objects.Length; i++) {
                 if (objects[i] != null && objects[i].IsItem()) return objects[i];
@@ -76,6 +80,14 @@ namespace TextBasedAdventureGame
         public bool CheckIfWall() { 
             for (int i = 0; i < objects.Length; i++) {
                 if (objects[i] != null && objects[i].IsWall()) return true;
+            }
+
+            return false;
+        }
+
+        public bool CheckIfKeyWall() {
+            for (int i = 0; i < objects.Length; i++) {
+                if (objects[i] != null && objects[i].IsWall() && objects[i].IsKeyWall()) return true;
             }
 
             return false;

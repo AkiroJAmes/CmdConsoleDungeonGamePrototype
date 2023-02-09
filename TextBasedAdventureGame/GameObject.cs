@@ -30,6 +30,12 @@ namespace TextBasedAdventureGame
             return false;
         }
 
+        public virtual bool IsKeyWall() { return false; }
+
+        public virtual GameObject GetGameObject() { return this; }
+
+        public virtual bool IsAlive() { return false; }
+
         public Vector2 GetGameObjectPosition()
         {
             return new Vector2(xPosition, yPosition);
@@ -71,6 +77,11 @@ namespace TextBasedAdventureGame
             Console.ForegroundColor = ConsoleColor.Black;
             Console.Write("88");
             Console.ResetColor();
+        }
+
+        public override bool IsKeyWall()
+        {
+            return true;
         }
     }
 

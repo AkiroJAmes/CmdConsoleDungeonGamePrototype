@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace TextBasedAdventureGame
@@ -28,9 +30,17 @@ namespace TextBasedAdventureGame
             InBattle
         }
 
+        public enum BattleOptions
+        {
+            Attack,
+            Defend,
+            Item
+        }
+
         static void Main(string[] args)
         {
             Console.CursorVisible = false;
+            Console.SetWindowSize(rowUserInputSize * 2, colUserInputSize * 2);
 
             while (true) {
                 gameState = GameState.InDungeon;
@@ -42,7 +52,7 @@ namespace TextBasedAdventureGame
 
 
                 var r = new Random();
-                p = new Player(5, 10, 2, 1, 0);
+                p = new Player(5, 10, 2, 0, 1);
                 e = new Enemy[r.Next(2, 4)];
                 PowerUp[] pu = new PowerUp[r.Next(1, 2)];
                 PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
@@ -64,13 +74,19 @@ namespace TextBasedAdventureGame
             Vector2 newPlayerPosition = Vector2.Zero;
             Vector2 playerPositionLastTurn = Vector2.Zero;
 
+            DrawMainDungeonScreen();
+
             while (true) {
                 if(gameState == GameState.InDungeon) { 
-                    DrawMainDungeonScreen();
-
                     var pPosition = p.GetGameObjectPosition();
 
-                    var actionUserInput = Console.ReadKey().Key;
+                    ConsoleKey actionUserInput = ConsoleKey.F24;
+
+                    if(Console.KeyAvailable) {
+                        actionUserInput = Console.ReadKey(true).Key;
+                    } else {
+                        continue;
+                    }
 
                     switch (actionUserInput)
                     {
@@ -90,16 +106,17 @@ namespace TextBasedAdventureGame
                         case ConsoleKey.A:
                             newPlayerPosition = new Vector2(pPosition.X - 1, pPosition.Y);
                             break;
-/*                        case ConsoleKey.X:
+                        case ConsoleKey.X:
                         case ConsoleKey.E:
                             PlayerInventory();
-                            Console.Clear();
-                            continue;
+                            break;
                         case ConsoleKey.Z:
                         case ConsoleKey.F:
                             PickUpNewItem(pPosition);
-                            Console.Clear();
-                            continue;*/
+                            continue;
+                        case ConsoleKey.P:
+                            p.AddEXP(1);
+                            break;
                     }
 
                     // Check if new player position is valid
@@ -126,27 +143,40 @@ namespace TextBasedAdventureGame
                             break;
                     }
 
-                
-/*                    if (!mapPosition.CheckIfEmpty()) {
+                    if (!mapPosition.CheckIfEmpty() && gameState != GameState.InBattle) {
                         GameObject e = mapPosition.CheckIfEnemy();
                         if (e != null) {
-                            Console.SetCursorPosition(0, 0);
-                            DrawDungeon();
-                            p.WriteStats();
-                            WriteControls();
-                            Console.Write("You ran into an enemy!");
+                            DrawMainDungeonScreen();
+                            gameState = GameState.InBattle;
+                            //Console.Write("You ran into an enemy!");
 
-                            Console.ReadKey();
+                            Console.ReadKey(true);
 
-                            FightSequence(p, e, p);
+                            if (!FightSequence(e, p)) {
+                                Console.Clear();
+                                Console.Write("You lost!");
+                                Console.ReadKey();
+                                break;
+                            } else {
+                                Console.Clear();
+                                Console.Write("You won!");
+                                Console.ReadKey();
+                            }
+
+                            gameState = GameState.InDungeon;
                         }
-                    }*/
+                    }
 
-                    Console.SetCursorPosition(0, 0);
+                    EnemyAction();
+
+                    timer = Utility.ResetEnemyTimer(timer);
+
+                    DrawMainDungeonScreen();
                 }
             }
         }
 
+        // Prevent draw call overlap with lock
         private static readonly object myLock = new object();
 
         private static void DrawMainDungeonScreen()
@@ -233,34 +263,128 @@ namespace TextBasedAdventureGame
                     map[(int)currentPosition.X, (int)currentPosition.Y].RemoveGameObject(enemy);
                     map[(int)newPosition.X, (int)newPosition.Y].AddGameObject(enemy, (int)newPosition.X, (int)newPosition.Y);
 
-/*                    if(playerPosition == newPosition) {
-                        Console.SetCursorPosition(0, 0);
-                        DrawDungeon();
-                        p.WriteStats();
-                        WriteControls();
-                        Console.Write("An enemy ran into you!");
+                    if(playerPosition == newPosition) {
+                        DrawMainDungeonScreen();
+                        gameState = GameState.InBattle;
+                        //Console.Write("An enemy ran into you!");
 
-                        FightSequence(p, enemy, enemy);
-                    }*/
+                        if (!FightSequence(enemy, enemy)) {
+                            Console.Clear();
+                            Console.Write("You lost!");
+                            Console.ReadKey();
+                            break;
+                        } else {
+                            Console.Clear();
+                            Console.Write("You won!");
+                            Console.ReadKey();
+                        }
+                        gameState = GameState.InDungeon;
+                    }
                 }
             }
         }
 
-        private static void FightSequence(Player player, GameObject enemy, GameObject advantage)
+        private static bool FightSequence(GameObject enemy, GameObject advantage)
         {
-            gameState = GameState.InBattle;
             while (true)
             {
                 Console.Clear();
                 Console.Write($"Fighting enemy {enemy.GetName()}, {advantage.GetName()} has the advantage ");
-                Console.WriteLine($"{player.GetGameObjectPosition()}, {enemy.GetGameObjectPosition()}");
-                Console.ReadKey();
+                Console.WriteLine($"{p.GetGameObjectPosition()}, {enemy.GetGameObjectPosition()}");
 
-                var mapPosition = player.GetGameObjectPosition();
-                map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
-                enemy.SetHP(0);
-                Console.Clear();
+                var input = Console.ReadKey(true).Key;
+
+                int battleMenuPosition = 0;
+                int maxBattleOptions = 2; // Attack Defend Item
+                BattleOptions currentBattleOption = BattleOptions.Attack;
+
+                while (true)
+                {
+                    currentBattleOption = DrawBattleMenu(battleMenuPosition, currentBattleOption);
+
+                    var key = Console.ReadKey(true).Key;
+
+                    if (p.IsAlive()) {
+                        return false;
+                    }
+                    if (enemy.IsAlive()) {
+                        p.AddEXP(new Random().Next(2, 5));
+                        return true;
+                    }
+
+                    switch (key)
+                    {
+                        case ConsoleKey.UpArrow:
+                        case ConsoleKey.W:
+                            battleMenuPosition--;
+                            currentBattleOption = Utility.Previous(currentBattleOption);
+                            if (battleMenuPosition < 0) battleMenuPosition = maxBattleOptions;
+                            break;
+                        case ConsoleKey.DownArrow:
+                        case ConsoleKey.S:
+                            battleMenuPosition++;
+                            currentBattleOption = Utility.Next(currentBattleOption);
+                            if (battleMenuPosition > maxBattleOptions) battleMenuPosition = 0;
+                            break;
+                        case ConsoleKey.Z:
+                        case ConsoleKey.E:
+                            BattleAction(currentBattleOption, enemy);
+                            Console.SetCursorPosition(0, 1);
+                            continue;
+                        default:
+                            Console.SetCursorPosition(0, 1);
+                            continue;
+                    }
+
+                    Console.SetCursorPosition(0, 1);
+                }
+
+                break;
             }
+        }
+
+        private static void BattleAction(BattleOptions currentBattleOption, GameObject enemy)
+        {
+            switch (currentBattleOption)
+            {
+                case BattleOptions.Attack:
+                    Console.Write("Attacking the enemy, this is a long message to appear in the console");
+                    var mapPosition = p.GetGameObjectPosition();
+                    map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
+                    enemy.SetHP(0);
+                    break;
+                case BattleOptions.Defend:
+                    Console.Write("Defending to take less damage, this is a long message to appear in the console");
+                    break;
+                case BattleOptions.Item:
+                    Console.Write("Using an item, this is a long message to appear in the console ");
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private static BattleOptions DrawBattleMenu(int battleMenuPosition, BattleOptions currentBattleOption)
+        {
+            BattleOptions[] arr = (BattleOptions[])Enum.GetValues(currentBattleOption.GetType());
+
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (i == battleMenuPosition)
+                {
+                    Console.BackgroundColor = ConsoleColor.Gray;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                }
+                else
+                {
+                    Console.ResetColor();
+                }
+
+                Console.WriteLine($"\r{arr[i]}");
+                Console.ResetColor();
+            }
+
+            return currentBattleOption;
         }
 
         static void PlayerInventory() {
@@ -273,7 +397,7 @@ namespace TextBasedAdventureGame
             while(true) {
                 DrawInventory(inventoryCursorPositon);
 
-                var key = Console.ReadKey().Key;
+                var key = Console.ReadKey(true).Key;
 
                 switch (key)
                 {
@@ -289,6 +413,8 @@ namespace TextBasedAdventureGame
                         break;
                     case ConsoleKey.X:
                     case ConsoleKey.Escape:
+                        Console.Clear();
+                        gameState = GameState.InDungeon;
                         return;
                     default:
                         Console.SetCursorPosition(0, 0);
@@ -304,16 +430,34 @@ namespace TextBasedAdventureGame
             var mapPosition = map[(int)pPosition.X, (int)pPosition.Y];
             var item = mapPosition.CheckIfItem();
 
-            if(item == null) { 
-                Console.WriteLine("You went to pick up an item but nothing is there");
-                Console.ReadKey();
-            }
-
             if(item != null) {
                 Console.WriteLine($"You picked up {item.GetQTY()}x {item.GetName()}");
                 p.AddItem(item);
                 mapPosition.RemoveGameObject(item);
-                Console.ReadKey();
+                Console.ReadKey(true);
+            }
+
+            if (map[(int)pPosition.X + 1, (int)pPosition.Y].CheckIfKeyWall())
+            {
+                var items = p.GetItems();
+
+                foreach (var i in items)
+                {
+                    if (i.GetName() == "Strange Key") {
+                        map[(int)pPosition.X + 1, (int)pPosition.Y].RemoveGameObject(map[(int)pPosition.X + 1, (int)pPosition.Y].GetGameObjects()[0]);
+                        DrawMainDungeonScreen();
+                        return;
+                    }
+                }
+
+                Console.Write($"You need a key to open this door");
+                return;
+            }
+
+            if (item == null)
+            {
+                Console.WriteLine("You went to pick up an item but nothing is there");
+                Console.ReadKey(true);
             }
         }
 
@@ -347,7 +491,7 @@ namespace TextBasedAdventureGame
 
             // Add pickup items
             for (int i = 0; i < pui.Length; i++) {
-                string[] itemTypes = new string[] { "Junk", "Health Potion", "Pokeball" , "Mana Potion", "Stick", "Strength Potion"};
+                string[] itemTypes = new string[] { "Junk", "Health Potion", "Pokeball" , "Mana Potion", "Stick", "Strength Potion", "Strange Key"};
                 pui[i] = new PickUpItem(itemTypes[r.Next(0, itemTypes.Length)], r.Next(1, 5));
 
                 while(true) {
@@ -361,7 +505,7 @@ namespace TextBasedAdventureGame
 
             // Add enemies
             for (int i = 0; i < e.Length; i++) {
-                e[i] = new Enemy(1, 1, 1, i.ToString());
+                e[i] = new Enemy(1, r.Next(9, 12), 1, i.ToString());
 
                 while(true) {
                     var randomPosition = new Vector2(r.Next(1, rowUserInputSize - 1), r.Next(1, colUserInputSize - 1));
@@ -425,11 +569,10 @@ namespace TextBasedAdventureGame
         }
 
         static void InitTimer() {
-            timer = new Timer(TimerCallback, null, 0, 1000);
+            timer = new Timer(TimerCallback, null, 1000, 1000);
 
         }
-
-        static void TimerCallback(Object stateinfo) {
+        public static void TimerCallback(Object stateinfo) {
             if(gameState == GameState.InDungeon) { 
                 EnemyAction();
                 DrawMainDungeonScreen();

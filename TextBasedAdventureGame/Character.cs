@@ -12,7 +12,7 @@ namespace TextBasedAdventureGame
         protected int HP;
         protected int DF;
 
-        public bool IsAlive()
+        public override bool IsAlive()
         {
             return HP <= 0;
         }
@@ -30,16 +30,16 @@ namespace TextBasedAdventureGame
 
     class Player : Character
     {
-        int LVL;
-        int EXP;
+        protected int LVL;
+        protected int EXP;
         List<GameObject> ITEMS = new List<GameObject>();
 
-        public Player(int at, int hp, int df, int lvl, int exp) {
+        public Player(int at, int hp, int df, int exp, int lvl) {
             this.AT = at;
             this.HP = hp;
             this.DF = df;
-            this.LVL = lvl;
             this.EXP = exp;
+            this.LVL = lvl;
         }
 
         public override void Draw() {
@@ -50,13 +50,37 @@ namespace TextBasedAdventureGame
         }
 
         public int GetLVL() { return LVL; }
-        public int GetEXP() { return EXP; }
+
+        public int NextLevel() {
+            return (int)Math.Round(0.04 * Math.Pow(LVL, 3) + 0.8 * Math.Pow(LVL, 2) + 2 * LVL);
+        }
+
+        public int GetEXP() {
+            if (EXP >= NextLevel()) {
+                UpdateLVL();
+                return 0;
+            }
+            return EXP; 
+        }
+
+        void UpdateLVL() {
+            LVL++;
+            EXP = 0;
+        }
 
         public void WriteStats() {
+
+            GetEXP();
+
             // Make sure the line is clear
             Console.WriteLine("\r                                     ");
-            Console.Write($"Level: {LVL} | EXP: {EXP} / {LVL * 10} | ");
+            Console.Write($"Level: {GetLVL()} | EXP: {GetEXP()} / {NextLevel()} | ");
             Console.Write($"HP{HP} : AT{AT} : DF{DF}");
+        }
+
+        public void AddEXP(int exp) {
+            EXP += exp;
+            GetEXP();
         }
 
         public void AddItem(GameObject item) {
