@@ -16,11 +16,8 @@ namespace TextBasedAdventureGame
         static Enemy[] e;
         static Player p;
 
-        static ConsoleKey playerInput;
-
         static Timer timer;
-        static bool currentlyDrawing;
-
+        static string[] messages = new string[] { "Explore the dungeon...", null, null };
         static GameState gameState;
 
         enum GameState 
@@ -109,13 +106,17 @@ namespace TextBasedAdventureGame
                         case ConsoleKey.X:
                         case ConsoleKey.E:
                             PlayerInventory();
+                            DrawMainDungeonScreen();
                             break;
                         case ConsoleKey.Z:
                         case ConsoleKey.F:
                             PickUpNewItem(pPosition);
-                            continue;
+                            break;
                         case ConsoleKey.P:
-                            p.AddEXP(1);
+                            p.AddEXP(10);
+                            p.WriteStats();
+      
+
                             break;
                     }
 
@@ -146,9 +147,9 @@ namespace TextBasedAdventureGame
                     if (!mapPosition.CheckIfEmpty() && gameState != GameState.InBattle) {
                         GameObject e = mapPosition.CheckIfEnemy();
                         if (e != null) {
-                            DrawMainDungeonScreen();
+                            RedrawObject(pPosition, newPlayerPosition);
                             gameState = GameState.InBattle;
-                            //Console.Write("You ran into an enemy!");
+                            AddMessageHistory($"You attacked {e.Name}!");
 
                             Console.ReadKey(true);
 
@@ -161,17 +162,88 @@ namespace TextBasedAdventureGame
                                 Console.Clear();
                                 Console.Write("You won!");
                                 Console.ReadKey();
+                                AddMessageHistory($"You won against {e.Name}!");
+                                DrawMainDungeonScreen();
                             }
 
                             gameState = GameState.InDungeon;
                         }
                     }
 
+                    RedrawObject(pPosition, newPlayerPosition);
+
                     EnemyAction();
 
                     timer = Utility.ResetEnemyTimer(timer);
 
-                    DrawMainDungeonScreen();
+                    RedrawObject(pPosition, newPlayerPosition);
+                }
+            }
+        }
+
+        private static void RedrawObject(Vector2 position, Vector2 newPosition)
+        {
+            Console.SetCursorPosition((int)position.X * 2, (int)position.Y);
+            map[(int)position.X, (int)position.Y].Draw();
+
+            Console.SetCursorPosition((int)newPosition.X * 2, (int)newPosition.Y);
+            map[(int)newPosition.X, (int)newPosition.Y].Draw();
+        }
+
+        static void AddMessageHistory(string newMessage) {
+            bool added = false;
+
+            for (int i = 0; i < messages.Length; i++)
+            {
+                if (messages[i] == null)
+                {
+                    messages[i] = newMessage;
+                    added = true;
+                    break;
+                }
+            }
+
+            if (!added)
+            {
+                for (int i = 0; i < messages.Length - 1; i++)
+                {
+                    messages[i] = messages[i + 1];
+                }
+
+                messages[messages.Length - 1] = newMessage;
+            }
+
+            DrawMessageHistory();
+        }
+
+        static void DrawMessageHistoryBox() {
+            for (int i = 0; i < 40; i++)
+            {
+                for (int j = 0; j < 5; j++)
+                {
+                    Console.SetCursorPosition(2 + i, 25 + j);
+                    if((i == 0 && j == 0) || (i == 0 && j == 4) || (i == 39 && j == 0) || (i == 39 && j == 4)) {
+                        Console.Write(" ");
+                        continue;
+                    }
+
+                    if (i == 0) Console.Write("|");
+                    if (i == 39) Console.Write("|");
+                    if (j == 0) Console.Write("-");
+                    if (j == 4) Console.Write("-");
+                }
+            }
+        }
+
+        static void DrawMessageHistory() {
+            for (int i = messages.Length - 1; i >= 0; i--)
+            {
+
+                if (messages[i] != null) {
+                    Console.SetCursorPosition(4, 26 + i);
+                    Console.Write("                                     ");
+                    Console.SetCursorPosition(4, 26 + i);
+                    Console.Write(messages[i]);
                 }
             }
         }
@@ -185,6 +257,8 @@ namespace TextBasedAdventureGame
                 Console.SetCursorPosition(0, 0);
                 DrawDungeon();
                 p.WriteStats();
+                DrawMessageHistoryBox();
+                DrawMessageHistory();
                 WriteControls();
             }
 /*            // Buffer draw calls made to ensure no draws are overlapped
@@ -263,10 +337,14 @@ namespace TextBasedAdventureGame
                     map[(int)currentPosition.X, (int)currentPosition.Y].RemoveGameObject(enemy);
                     map[(int)newPosition.X, (int)newPosition.Y].AddGameObject(enemy, (int)newPosition.X, (int)newPosition.Y);
 
+                    RedrawObject(currentPosition, newPosition);
+
                     if(playerPosition == newPosition) {
-                        DrawMainDungeonScreen();
+                        RedrawObject(currentPosition, newPosition);
                         gameState = GameState.InBattle;
-                        //Console.Write("An enemy ran into you!");
+                        AddMessageHistory($"{enemy.Name} has attacked you!");
+
+                        Console.ReadKey(true);
 
                         if (!FightSequence(enemy, enemy)) {
                             Console.Clear();
@@ -277,6 +355,8 @@ namespace TextBasedAdventureGame
                             Console.Clear();
                             Console.Write("You won!");
                             Console.ReadKey();
+                            AddMessageHistory($"You won against {enemy.Name}!");
+                            DrawMainDungeonScreen();
                         }
                         gameState = GameState.InDungeon;
                     }
@@ -289,7 +369,7 @@ namespace TextBasedAdventureGame
             while (true)
             {
                 Console.Clear();
-                Console.Write($"Fighting enemy {enemy.GetName()}, {advantage.GetName()} has the advantage ");
+                Console.Write($"Fighting enemy {enemy.Name}, {advantage.Name} has the advantage ");
                 Console.WriteLine($"{p.GetGameObjectPosition()}, {enemy.GetGameObjectPosition()}");
 
                 var input = Console.ReadKey(true).Key;
@@ -338,8 +418,6 @@ namespace TextBasedAdventureGame
 
                     Console.SetCursorPosition(0, 1);
                 }
-
-                break;
             }
         }
 
@@ -351,7 +429,7 @@ namespace TextBasedAdventureGame
                     Console.Write("Attacking the enemy, this is a long message to appear in the console");
                     var mapPosition = p.GetGameObjectPosition();
                     map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
-                    enemy.SetHP(0);
+                    enemy.Hp = 0;
                     break;
                 case BattleOptions.Defend:
                     Console.Write("Defending to take less damage, this is a long message to appear in the console");
@@ -431,10 +509,9 @@ namespace TextBasedAdventureGame
             var item = mapPosition.CheckIfItem();
 
             if(item != null) {
-                Console.WriteLine($"You picked up {item.GetQTY()}x {item.GetName()}");
+                AddMessageHistory($"You picked up {item.Qty}x {item.Name}");
                 p.AddItem(item);
                 mapPosition.RemoveGameObject(item);
-                Console.ReadKey(true);
             }
 
             if (map[(int)pPosition.X + 1, (int)pPosition.Y].CheckIfKeyWall())
@@ -443,21 +520,20 @@ namespace TextBasedAdventureGame
 
                 foreach (var i in items)
                 {
-                    if (i.GetName() == "Strange Key") {
+                    if (i.Name == "Strange Key") {
                         map[(int)pPosition.X + 1, (int)pPosition.Y].RemoveGameObject(map[(int)pPosition.X + 1, (int)pPosition.Y].GetGameObjects()[0]);
-                        DrawMainDungeonScreen();
+                        map[(int)pPosition.X + 1, (int)pPosition.Y].Draw();
                         return;
                     }
                 }
 
-                Console.Write($"You need a key to open this door");
+                AddMessageHistory($"You need a key to open this door");
                 return;
             }
 
             if (item == null)
             {
-                Console.WriteLine("You went to pick up an item but nothing is there");
-                Console.ReadKey(true);
+                AddMessageHistory("Nothing is there to pick up");
             }
         }
 
@@ -474,7 +550,70 @@ namespace TextBasedAdventureGame
 
 
             // Add Player
-            map[(int)(rowUserInputSize / 2), (int)(colUserInputSize / 2)].AddGameObject(p, (int)(rowUserInputSize / 2), (int)(colUserInputSize / 2));
+            map[2, 2].AddGameObject(p, 2, 2);
+
+            // Random Y position for locked door
+            var randomCollumnWall = r.Next(4, colUserInputSize - 4);
+
+            // Add walls
+            for (int col = 0; col < colUserInputSize; col++) {
+                for (int row = 0; row < rowUserInputSize; row++) {
+                    if (row == rowUserInputSize - 1 && col == randomCollumnWall) {
+                        map[row, col].AddGameObject(new LockedDoor(), row, col);
+                        continue;
+                    }
+                    if (col == 0 || col == rowUserInputSize - 1 || row == 0 || row == colUserInputSize - 1) {
+
+                        if((row == 0 && col == 0) || (row == rowUserInputSize - 1 && col == 0) /*|| (row == 0 && col == colUserInputSize - 1) || (row == rowUserInputSize - 1 && col == colUserInputSize - 1)*/) {
+                            map[row, col].AddGameObject(new CornerWall(), row, col);
+                            continue;
+                        }
+
+                        if (col == 0) map[row, col].AddGameObject(new TopWall(), row, col);
+                        if(col == colUserInputSize - 1) map[row, col].AddGameObject(new BottomWall(), row, col);
+                        if (row == 0) map[row, col].AddGameObject(new LeftWall(), row, col);
+                        if (row == rowUserInputSize - 1) map[row, col].AddGameObject(new RightWall(), row, col);
+                    }
+                }
+            }
+
+            var randomRowWall = r.Next(0, rowUserInputSize - (rowUserInputSize / 2));
+            var randomColCorner = r.Next(colUserInputSize - 5, colUserInputSize - 1);
+
+            for (int col = 0; col < colUserInputSize; col++) {
+                for (int row = 0; row < rowUserInputSize; row++) {
+                    if(col > randomColCorner && row < randomRowWall)
+                    {
+                        foreach (var gameObject in map[row, col].GetGameObjects())
+                        {
+                            if(gameObject != null)
+                            {
+                                map[row, col].RemoveGameObject(gameObject);
+                            }
+                        }
+
+                        map[row, col].AddGameObject(new Void(), row, col);
+                    }
+
+                    if (col == randomColCorner && row == 0) {
+                        map[row, col].AddGameObject(new LeftWall(), row, col);
+                    }
+
+                    else if (col == randomColCorner && row <= randomRowWall)
+                    {
+                        map[row, col].AddGameObject(new TopWall(), row, col);
+                    }
+
+                    if(row == randomRowWall && col > randomColCorner)
+                    {
+                        if(col == randomColCorner)
+                        {
+                            map[row, col].AddGameObject(new LeftWallDetail(), row, col);
+                        }
+                        map[row, col].AddGameObject(new LeftWall(), row, col);
+                    }
+                }
+            }
 
             // Add powerups
             for (int i = 0; i < pu.Length; i++) {
@@ -515,21 +654,6 @@ namespace TextBasedAdventureGame
                     }
                 }
             }
-
-            // Random Y position for locked door
-            var randomCollumnWall = r.Next(4, colUserInputSize - 4); 
-
-            // Add walls
-            for (int col = 0; col < colUserInputSize; col++) {
-                for (int row = 0; row < rowUserInputSize; row++) {
-                    if (row == rowUserInputSize - 1 && col == randomCollumnWall) {
-                        map[row, col].AddGameObject(new LockedDoor(), row, col);
-                        continue;
-                    }
-                    if (col == 0 || col == rowUserInputSize - 1 || row == 0 || row == colUserInputSize - 1)
-                        map[row, col].AddGameObject(new Wall(), row, col);
-                }
-            }
         }
 
         static void DrawDungeon() {
@@ -555,16 +679,18 @@ namespace TextBasedAdventureGame
                     Console.ResetColor();
                 }
 
-                Console.WriteLine($"{items[i].GetQTY()}x {items[i].GetName()}");
+                Console.WriteLine($"{items[i].Qty}x {items[i].Name}");
                 Console.ResetColor();
             }
         }
 
         static void WriteControls() {
-            Console.WriteLine("                                         \n");
+            Console.SetCursorPosition(10, 31);
             Console.BackgroundColor = ConsoleColor.White;
             Console.ForegroundColor = ConsoleColor.Black;
-            Console.WriteLine("   W    E < inventory \n A S D    F < pickup  ");
+            Console.Write("   W    E < inventory ");
+            Console.SetCursorPosition(10, 32);
+            Console.Write(" A S D    F < pickup  ");
             Console.ResetColor();
         }
 
@@ -575,7 +701,6 @@ namespace TextBasedAdventureGame
         public static void TimerCallback(Object stateinfo) {
             if(gameState == GameState.InDungeon) { 
                 EnemyAction();
-                DrawMainDungeonScreen();
             }
         }
     }

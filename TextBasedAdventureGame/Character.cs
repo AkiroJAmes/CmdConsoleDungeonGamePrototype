@@ -17,15 +17,20 @@ namespace TextBasedAdventureGame
             return HP <= 0;
         }
 
-        public override void SetHP(int hp) { 
-            this.HP = hp;
+        public override int Hp {
+            get {
+                return this.HP;
+            }
+
+            set {
+                this.HP = value;
+            }
         }
 
-        public override string GetName() { return NAME; }
+        public override string Name { get; }
 
-        public int GetAT() { return AT; }
-        public int GetHP() { return HP; }
-        public int GetDF() { return DF; }
+        public int At { get; }
+        public int Df { get; }
     }
 
     class Player : Character
@@ -49,7 +54,7 @@ namespace TextBasedAdventureGame
             Console.ResetColor();
         }
 
-        public int GetLVL() { return LVL; }
+        public int Lvl { get { return LVL; } }
 
         public int NextLevel() {
             return (int)Math.Round(0.04 * Math.Pow(LVL, 3) + 0.8 * Math.Pow(LVL, 2) + 2 * LVL);
@@ -60,7 +65,7 @@ namespace TextBasedAdventureGame
                 UpdateLVL();
                 return 0;
             }
-            return EXP; 
+            return EXP;
         }
 
         void UpdateLVL() {
@@ -73,8 +78,10 @@ namespace TextBasedAdventureGame
             GetEXP();
 
             // Make sure the line is clear
-            Console.WriteLine("\r                                     ");
-            Console.Write($"Level: {GetLVL()} | EXP: {GetEXP()} / {NextLevel()} | ");
+            Console.SetCursorPosition(2, 23);
+            Console.Write("\r                                            ");
+            Console.SetCursorPosition(2, 23);
+            Console.Write($"Level: {Lvl} | EXP: {GetEXP()} / {NextLevel()} | ");
             Console.Write($"HP{HP} : AT{AT} : DF{DF}");
         }
 
@@ -88,8 +95,8 @@ namespace TextBasedAdventureGame
             {
                 // Add item to stack with existing items
 
-                if (ITEMS[i].GetName() == item.GetName()) {
-                    ITEMS[i].SetQTY(item.GetQTY() + ITEMS[i].GetQTY());
+                if (ITEMS[i].Name == item.Name) {
+                    ITEMS[i].Qty = item.Qty + ITEMS[i].Qty;
                     return;
                 } 
             }

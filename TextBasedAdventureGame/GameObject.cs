@@ -18,6 +18,10 @@ namespace TextBasedAdventureGame
             this.yPosition = yPosition;
         }
 
+        public virtual string Name { get; }
+
+        public virtual int Qty { get; set; }
+
         public virtual bool IsWall() {
             return false;
         }
@@ -41,47 +45,14 @@ namespace TextBasedAdventureGame
             return new Vector2(xPosition, yPosition);
         }
 
-        public virtual string GetName() {
-            return "N/A";
-        }
-
-        public virtual int GetQTY() {
-            return -1;
-        }
-
-        public virtual void SetQTY(int q) {  }
-
-        public virtual void SetHP(int hp) { }
+        public virtual int Hp { get; set; }
     }
 
-    class Wall : GameObject
+    class Void : GameObject
     {
         public override void Draw()
         {
-            Console.BackgroundColor = ConsoleColor.White;
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write("= ");
-            Console.ResetColor();
-        }
-
-        public override bool IsWall() {
-            return true;
-        }
-    }
-
-    class LockedDoor : Wall
-    {
-        public override void Draw()
-        {
-            Console.BackgroundColor = ConsoleColor.White;
-            Console.ForegroundColor = ConsoleColor.Black;
-            Console.Write("88");
-            Console.ResetColor();
-        }
-
-        public override bool IsKeyWall()
-        {
-            return true;
+            Console.Write("  ");
         }
     }
 
@@ -109,11 +80,17 @@ namespace TextBasedAdventureGame
             this.QTY = qty;
         }
 
-        public override string GetName() { return this.NAME; }
+        public override string Name { 
+            get {
+                return this.NAME;
+            }
+        }
 
-        public override int GetQTY() { return this.QTY; }
-
-        public override void SetQTY(int q) { this.QTY = q; }
+        public override int Qty { 
+            get {
+                return this.QTY;
+            }
+        }
 
         public override void Draw()
         {
