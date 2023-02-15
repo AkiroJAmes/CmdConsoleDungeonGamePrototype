@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TextBasedAdventureGame
+namespace TextAdventureGame
 {
     class Wall : GameObject
     {
@@ -30,16 +30,28 @@ namespace TextBasedAdventureGame
                     Console.Write(" |");
                     break;
                 case 1:
-                    Console.Write("'|");
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write("'");
+                    Console.ResetColor();
+                    Console.Write("|");
                     break;
                 case 2:
-                    Console.Write(";|");
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write(";");
+                    Console.ResetColor();
+                    Console.Write("|");
                     break;
                 case 3:
-                    Console.Write("`|");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.Write("`");
+                    Console.ResetColor();
+                    Console.Write("|");
                     break;
                 case 4:
-                    Console.Write(".|");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.Write(".");
+                    Console.ResetColor();
+                    Console.Write("|");
                     break;
                 case 5:
                     Console.Write(" ]");
@@ -53,7 +65,23 @@ namespace TextBasedAdventureGame
     {
         public override void Draw()
         {
-            
+            Console.Write("  ");
+        }
+    }
+
+    class BottomLeftCorner : Wall
+    {
+        public override void Draw()
+        {
+            Console.Write("|_");
+        }
+    }
+
+    class BottomRightCorner : Wall
+    {
+        public override void Draw()
+        {
+            Console.Write("_|");
         }
     }
 
@@ -67,16 +95,28 @@ namespace TextBasedAdventureGame
                     Console.Write("| ");
                     break;
                 case 1:
-                    Console.Write("|'");
+                    Console.Write("|");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.Write("'");
+                    Console.ResetColor();
                     break;
                 case 2:
-                    Console.Write("|;");
+                    Console.Write("|");
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write(";");
+                    Console.ResetColor();
                     break;
                 case 3:
-                    Console.Write("|`");
+                    Console.Write("|");
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write("`");
+                    Console.ResetColor();
                     break;
                 case 4:
-                    Console.Write("|.");
+                    Console.Write("|");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.Write(".");
+                    Console.ResetColor();
                     break;
                 case 5:
                     Console.Write("[ ");
@@ -113,9 +153,8 @@ namespace TextBasedAdventureGame
     {
         public override void Draw()
         {
-            Console.BackgroundColor = ConsoleColor.White;
-            Console.ForegroundColor = ConsoleColor.Black;
-            Console.Write("8|");
+            Console.Write("D|");
+            Console.ResetColor();
             Console.ResetColor();
         }
 

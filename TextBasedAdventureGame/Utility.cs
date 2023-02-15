@@ -3,24 +3,24 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-using static TextBasedAdventureGame.Program;
+using static TextAdventureGame.Program;
 
-namespace TextBasedAdventureGame
+namespace TextAdventureGame
 {
     class Utility
     {
-        public static BattleOptions Next(BattleOptions src)
+        public static T Next<T>(T src)
         {
-            BattleOptions[] arr = (BattleOptions[])Enum.GetValues(src.GetType());
+            T[] arr = (T[])Enum.GetValues(src.GetType());
 
             // Get next index based on src index in array
             int j = Array.IndexOf(arr, src) + 1;
             return (arr.Length == j) ? arr[0] : arr[j];
         }
 
-        public static BattleOptions Previous(BattleOptions src)
+        public static T Previous<T>(T src)
         {
-            BattleOptions[] arr = (BattleOptions[])Enum.GetValues(src.GetType());
+            T[] arr = (T[])Enum.GetValues(src.GetType());
 
             // Get previous index based on src index in array
             int j = Array.IndexOf(arr, src) - 1;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TextBasedAdventureGame
+namespace TextAdventureGame
 {
     class Room {
         protected GameObject[] objects = new GameObject[3];

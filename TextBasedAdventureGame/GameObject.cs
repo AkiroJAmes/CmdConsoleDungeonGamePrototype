@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 
-namespace TextBasedAdventureGame
+namespace TextAdventureGame
 {
     abstract class GameObject
     {
@@ -45,7 +45,11 @@ namespace TextBasedAdventureGame
             return new Vector2(xPosition, yPosition);
         }
 
+        public virtual void UseItem(Player player) { }
+
         public virtual int Hp { get; set; }
+
+        public virtual Program.EnemyBattleAIState Ai { get; }
     }
 
     class Void : GameObject
@@ -66,56 +70,6 @@ namespace TextBasedAdventureGame
         {
             Console.ForegroundColor = ConsoleColor.DarkBlue;
             Console.Write("! ");
-            Console.ResetColor();
-        }
-    }
-
-    class PickUpItem : GameObject
-    {
-        protected string NAME;
-        protected int QTY;
-
-        public PickUpItem(string name, int qty) {
-            this.NAME = name;
-            this.QTY = qty;
-        }
-
-        public override string Name { 
-            get {
-                return this.NAME;
-            }
-        }
-
-        public override int Qty { 
-            get {
-                return this.QTY;
-            }
-        }
-
-        public override void Draw()
-        {
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.Write("? ");
-            Console.ResetColor();
-        }
-
-        public override bool IsItem()
-        {
-            return true;
-        }
-    }
-
-    class Key : PickUpItem
-    {
-        public Key(string name, int qty) : base (name, qty) {
-            this.NAME = name;
-            this.QTY = qty;
-        }
-
-        public override void Draw()
-        {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write("::");
             Console.ResetColor();
         }
     }
