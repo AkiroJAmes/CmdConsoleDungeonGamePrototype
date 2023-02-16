@@ -2,10 +2,24 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TextAdventureGame
+namespace AdventureGame
 {
     class Room {
         protected GameObject[] objects = new GameObject[3];
+
+        public void AddGameObject(GameObject go) {
+            for (int i = 0; i < objects.Length; i++) {
+                if (objects[i] == null) { 
+                    objects[i] = go;
+
+                    // Swap so the most recent item is drawn on top
+                    var temp = objects[0];
+                    objects[0] = go;
+                    objects[i] = temp;
+                    break;
+                }
+            }
+        }
 
         public void AddGameObject(GameObject go, int row, int col) {
             for (int i = 0; i < objects.Length; i++) {

@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace TextAdventureGame
+using static AdventureGame.DrawCalls;
+using static System.Net.Mime.MediaTypeNames;
+
+namespace AdventureGame
 {
     internal class Program
     {
@@ -14,20 +19,22 @@ namespace TextAdventureGame
 
         static Room[,] map;
         static Enemy[] e;
-        static Player p;
+        public static Player p;
 
         static Timer timer;
-        static string[] messages = new string[] { "Explore the dungeon...", null, null };
-        static GameState gameState;
+        public static string[] dungeonMessages = new string[] { "Explore the dungeon...", null, null };
+        public static string[] battleMessages = new string[] { null, null, null };
 
-        enum GameState 
+        public static GameState gameState;
+
+        public enum GameState 
         {
             InDungeon,
             InInventory,
             InBattle
         }
 
-        enum MenuButtonState
+        public enum MenuButtonState
         {
             Start,
             Legends,
@@ -35,7 +42,7 @@ namespace TextAdventureGame
             Exit
         }
 
-        public enum T
+        public enum BattleOption
         {
             Attack,
             Defend,
@@ -43,7 +50,7 @@ namespace TextAdventureGame
         }
 
         enum EnemyBattleState { 
-            Atack,
+            Attack,
             Defend,
             Run
         }
@@ -86,6 +93,7 @@ namespace TextAdventureGame
                         break;
                     case ConsoleKey.Z:
                     case ConsoleKey.F:
+                    case ConsoleKey.Enter:
                         MenuAction(currenMenuOption);
                         DrawMainMenu(menuCursorPosition);
                         break;
@@ -112,7 +120,7 @@ namespace TextAdventureGame
 
 
                         var r = new Random();
-                        p = new Player(5, 10, 2, 0, 1);
+                        p = new Player(5, 10, 5, 0, 1);
                         e = new Enemy[r.Next(2, 4)];
                         PowerUp[] pu = new PowerUp[r.Next(0, 2)];
                         PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
@@ -141,16 +149,12 @@ namespace TextAdventureGame
             Console.Clear();
         }
 
-        private static void GameLoop(PowerUp[] pu, PickUpItem[] pui)
+        static void GameLoop(PowerUp[] pu, PickUpItem[] pui)
         {
-            PlayerAction();
-        }
-
-        static void PlayerAction() {
             Vector2 newPlayerPosition = Vector2.Zero;
             Vector2 playerPositionLastTurn = Vector2.Zero;
 
-            DrawMainDungeonScreen();
+            DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
 
             while (true) {
                 if(gameState == GameState.InDungeon) { 
@@ -184,8 +188,9 @@ namespace TextAdventureGame
                             break;
                         case ConsoleKey.X:
                         case ConsoleKey.E:
-                            PlayerInventory();
-                            DrawMainDungeonScreen();
+                            PlayerInventory(GameState.InDungeon);
+                            gameState = GameState.InDungeon;
+                            DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
                             break;
                         case ConsoleKey.Z:
                         case ConsoleKey.F:
@@ -232,7 +237,7 @@ namespace TextAdventureGame
 
                             Console.ReadKey(true);
 
-                            FightSequence(e, p);
+                            FightSequence((Enemy)e, p);
 
                             gameState = GameState.InDungeon;
                         }
@@ -261,11 +266,11 @@ namespace TextAdventureGame
         public static void AddMessageHistory(string newMessage, bool redraw) {
             bool added = false;
 
-            for (int i = 0; i < messages.Length; i++)
+            for (int i = 0; i < dungeonMessages.Length; i++)
             {
-                if (messages[i] == null)
+                if (dungeonMessages[i] == null)
                 {
-                    messages[i] = newMessage;
+                    dungeonMessages[i] = newMessage;
                     added = true;
                     break;
                 }
@@ -273,96 +278,45 @@ namespace TextAdventureGame
 
             if (!added)
             {
-                for (int i = 0; i < messages.Length - 1; i++)
+                for (int i = 0; i < dungeonMessages.Length - 1; i++)
                 {
-                    messages[i] = messages[i + 1];
+                    dungeonMessages[i] = dungeonMessages[i + 1];
                 }
 
-                messages[messages.Length - 1] = newMessage;
+                dungeonMessages[dungeonMessages.Length - 1] = newMessage;
             }
 
             if(redraw)
                 DrawMessageHistory();
         }
 
-        static void DrawMessageHistoryBox() {
-            for (int i = 0; i < 40; i++)
+        public static void AddBattleMessageHistory(string newMessage, bool redraw) {
+            bool added = false;
+
+            for (int i = 0; i < battleMessages.Length; i++)
             {
-                for (int j = 0; j < 5; j++)
+                if (battleMessages[i] == null)
                 {
-                    Console.SetCursorPosition(2 + i, 25 + j);
-                    if((i == 0 && j == 0) || (i == 0 && j == 4) || (i == 39 && j == 0) || (i == 39 && j == 4)) {
-                        Console.Write(" ");
-                        continue;
-                    }
-
-                    if (i == 0) Console.Write("|");
-                    if (i == 39) Console.Write("|");
-                    if (j == 0) Console.Write("-");
-                    if (j == 4) Console.Write("-");
+                    battleMessages[i] = newMessage;
+                    added = true;
+                    break;
                 }
             }
-        }
 
-        static void DrawMessageHistory() {
-            for (int i = messages.Length - 1; i >= 0; i--)
+            if (!added)
             {
-
-                if (messages[i] != null) {
-                    Console.SetCursorPosition(4, 26 + i);
-                    Console.Write("                                     ");
-                    Console.SetCursorPosition(4, 26 + i);
-                    Console.Write(messages[i]);
-                }
-            }
-        }
-
-        // Prevent draw call overlap with lock
-        private static readonly object myLock = new object();
-
-        private static void DrawMainDungeonScreen()
-        {
-            lock (myLock) {
-                Console.SetCursorPosition(0, 0);
-                DrawDungeon();
-                p.WriteStats();
-                DrawMessageHistoryBox();
-                DrawMessageHistory();
-                WriteControls();
-            }
-/*            // Buffer draw calls made to ensure no draws are overlapped
-
-            if (!currentlyDrawing) {
-                currentlyDrawing = true;
-
-
-
-                // Very very small wait to ensure write has time to finish to avoid artifacts
-                Thread.Sleep(1);
-
-                currentlyDrawing = false;
-                return;
-            }
-
-            if (currentlyDrawing)
-            {
-                while (true) {
-                    if (!currentlyDrawing) break;
+                for (int i = 0; i < battleMessages.Length - 1; i++)
+                {
+                    battleMessages[i] = battleMessages[i + 1];
                 }
 
-                currentlyDrawing = true;
+                battleMessages[battleMessages.Length - 1] = newMessage;
+            }
 
-                Console.SetCursorPosition(0, 0);
-                DrawDungeon();
-                p.WriteStats();
-                WriteControls();
-
-                Thread.Sleep(1);
-
-                currentlyDrawing = false;
-                return;
-            }*/
+            if (redraw)
+                DrawBattleMessageHistory();
         }
+              
 
         private static void EnemyAction()
         {
@@ -372,7 +326,7 @@ namespace TextAdventureGame
                     var playerPosition = p.GetGameObjectPosition();
 
                     // How far the enemy can see the player
-                    var enemyViewDistance = 7;
+                    var enemyViewDistance = 0;
 
                     var newPosition = currentPosition;
                     var r = new Random();
@@ -410,6 +364,15 @@ namespace TextAdventureGame
                                 case Enemy.Species.Skeleton: // Vertical
                                     newPosition = currentPosition + new Vector2(0, r.Next(-1, 2));
                                     break;
+                                case Enemy.Species.Bat: // Chance to idle
+                                    if(r.Next(0, 2) == 0) {
+                                        if (r.Next(0, 2) == 0) newPosition = currentPosition + new Vector2(0, r.Next(-1, 2));
+                                        else newPosition = currentPosition + new Vector2(r.Next(-1, 2), 0);
+                                    } else newPosition = currentPosition;
+
+                                    if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && newPosition == currentPosition) goto End;
+
+                                    break;
                             }
 
                             if (map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty()) break;
@@ -430,7 +393,7 @@ namespace TextAdventureGame
 
                         Console.ReadKey(true);
 
-                        FightSequence(enemy, enemy);
+                        FightSequence((Enemy)enemy, enemy);
 
                         gameState = GameState.InDungeon;
                     }
@@ -438,53 +401,89 @@ namespace TextAdventureGame
             }
         }
 
-        private static void FightSequence(GameObject enemy, GameObject advantage)
+        private static void FightSequence(Enemy enemy, GameObject advantage)
         {
             while (true)
             {
                 Console.Clear();
-                Console.Write($"Fighting enemy {enemy.Name}, the {advantage.Name} has the advantage ");
-                Console.WriteLine($"{p.GetGameObjectPosition()}, {enemy.GetGameObjectPosition()}");
+                DrawBattleMessageHistoryBox();
+                p.WriteStats();
+
+                Console.SetCursorPosition(25, 3);
+                Console.Write($"{enemy.Name}: {enemy.Hp} HP     ");
+
+                Console.SetCursorPosition(25, 10);
+                enemy.Sprite();
+
+                if (advantage == p) AddBattleMessageHistory($"Fighting {enemy.Name}: HP: {enemy.Hp}", true);
+                else {
+                    AddBattleMessageHistory($"{enemy.Name} has first turn", true);
+                    AddBattleMessageHistory($"Fighting {enemy.Name}: HP: {enemy.Hp}", true);
+                    EnemyBattleAction(EnemyBattleState.Attack, BattleOption.Attack, true, enemy);
+                    p.WriteStats();
+                }
 
                 var input = Console.ReadKey(true).Key;
 
                 int battleMenuPosition = 0;
                 int maxBattleOptions = 2; // Attack Defend Item
-                T currentBattleOption = T.Attack;
+                BattleOption currentBattleOption = BattleOption.Attack;
 
                 while (true)
                 {
-                    currentBattleOption = DrawBattleMenu(battleMenuPosition, currentBattleOption);
 
-                    var key = Console.ReadKey(true).Key;
+                    Console.SetCursorPosition(25, 3);
+                    Console.Write($"{enemy.Name}: {enemy.Hp} HP     ");
+
+                    currentBattleOption = DrawBattleMenu(battleMenuPosition, currentBattleOption);
 
                     if (p.IsAlive()) {
                         Console.Clear();
                         Console.Write("You lost!");
-                        Console.ReadKey();
 
-                        return;
+
+                        Console.ReadKey(true);
+                        Environment.Exit(0);
                     }
                     if (enemy.IsAlive()) {
-                        p.AddEXP(new Random().Next(2, 5));
+                        var enemyName = enemy.Name;
 
-                        Console.Clear();
-                        Console.Write("You won!");
-                        Console.ReadKey();
-                        AddMessageHistory($"You won against the {enemy.Name}!", true);
-                        DrawMainDungeonScreen();
+                        if(enemy.Hp == 0) {
+                            p.AddEXP(new Random().Next(2, 5));
+
+                            AddBattleMessageHistory($"You won against the {enemyName}!", true);
+                            Console.ReadKey(true);
+                            Console.Clear();
+                            AddMessageHistory($"You won against the {enemyName}!", true);
+                        }
+
+                        if(enemy.Hp == -1) {
+                            AddBattleMessageHistory($"The {enemyName} fled!", true);
+                            Console.ReadKey(true);
+                            Console.Clear();
+                            AddMessageHistory($"The {enemyName} fled!", true);
+                        }
+
+                        for (int i = 0; i < e.Length; i++) {
+                            if (e[i] == enemy) e[i] = null;
+                        }
 
                         foreach (var e in e) {
-                            if (e != null) goto End;
+                            if (e != null) goto SkipKey;
                         }
 
                         p.AddItem(new Key("Strange Key", 1));
-                        AddMessageHistory($"The {enemy.Name} dropped 1x Strange Key", true);
+                        AddMessageHistory($"The {enemyName} dropped 1x Strange Key", true);
 
-                        End:
+                        SkipKey:
+
+                        DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
+                        battleMessages = new string[] { null, null, null };
 
                         return;
                     }
+
+                    var key = Console.ReadKey(true).Key;
 
                     switch (key)
                     {
@@ -501,7 +500,7 @@ namespace TextAdventureGame
                             if (battleMenuPosition > maxBattleOptions) battleMenuPosition = 0;
                             break;
                         case ConsoleKey.Z:
-                        case ConsoleKey.E:
+                        case ConsoleKey.F:
                             BattleAction(currentBattleOption, enemy);
                             Console.SetCursorPosition(0, 1);
                             continue;
@@ -515,31 +514,101 @@ namespace TextAdventureGame
             }
         }
 
-        private static void BattleAction(T currentBattleOption, GameObject enemy)
+        private static void BattleAction(BattleOption currentBattleOption, Enemy enemy)
         {
             var enemyAction = EnemyBattleAction(enemy.Ai);
 
-            Console.Write(enemyAction);
+            if (enemyAction == EnemyBattleState.Defend && currentBattleOption != BattleOption.Item) {
+                AddBattleMessageHistory($"The {enemy.Name} defended", true);
+                Thread.Sleep(500);
+            }
 
             switch (currentBattleOption)
             {
-                case T.Attack:
-                    Console.Write("Attacking the enemy, this is a long message to appear in the console");
-                    var mapPosition = p.GetGameObjectPosition();
-                    map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
-                    enemy.Hp = 0;
-                    for (int i = 0; i < e.Length; i++) {
-                        if (e[i] == enemy) e[i] = null;
+                case BattleOption.Attack:
+                    int atDmg = 1;
+
+                    if (enemyAction == EnemyBattleState.Defend) {
+                        // Enemy defending calculation
+                        atDmg = (int)(p.At * ((100 / (100 + (float)Math.Pow(enemy.Df, 1.5))) / 2));
+                    }
+                    else {
+                        // Base attack calculation
+                        atDmg = (int)(p.At * (100 / (100 + (float)Math.Pow(enemy.Df, 1.5))));
                     }
 
+                    // Default to 1 dmg if damage is too low
+                    if (atDmg < 1) atDmg = 1;
+
+
+                    AddBattleMessageHistory($"Attacking the enemy, -{atDmg}", true);
+
+                    enemy.Hp -= atDmg;
+
+                    if (enemy.Hp <= 0) {
+                        var mapPosition = p.GetGameObjectPosition();
+                        map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
+                        enemy.Hp = 0;
+
+                        Thread.Sleep(500);
+                        return;
+                    }
+
+                    //for (int i = 0; i < e.Length; i++) {
+                    //    if (e[i] == enemy) e[i] = null;
+                    //}
+
                     break;
-                case T.Defend:
-                    Console.Write("Defending to take less damage, this is a long message to appear in the console");
+                case BattleOption.Defend:
+                    AddBattleMessageHistory("You took a defensive stance", true);
                     break;
-                case T.Item:
-                    Console.Write("Using an item, this is a long message to appear in the console ");
-                    break;
+                case BattleOption.Item:
+                    PlayerInventory(GameState.InBattle);
+                    gameState = GameState.InBattle;
+                    DrawBattleMessageHistoryBox();
+                    DrawBattleMessageHistory();
+                    p.WriteStats();
+                    return;
                 default:
+                    break;
+            }
+
+            if (enemyAction == EnemyBattleState.Defend && currentBattleOption == BattleOption.Item) {
+                AddBattleMessageHistory($"The {enemy.Name} defended", true);
+            }
+
+            Thread.Sleep(500);
+
+            EnemyBattleAction(enemyAction, currentBattleOption, false, enemy);
+            p.WriteStats();
+        }
+
+        private static void EnemyBattleAction(EnemyBattleState currentEnemyBattleAction, BattleOption currentBattleOption, bool firstTurn, Enemy enemy)
+        {
+            switch (currentEnemyBattleAction)
+            {
+                case EnemyBattleState.Attack:
+                    int atDmg = 1;
+                    if (currentBattleOption == BattleOption.Defend) {
+                        // Enemy defending calculation
+                        atDmg = (int)(enemy.At * ((100 / (100 + (float)Math.Pow(p.Df, 1.5))) / 2));
+                    }
+                    else {
+                        // Base attack calculation
+                        atDmg = (int)(enemy.At * (100 / (100 + (float)Math.Pow(p.Df, 1.5))));
+                    }
+
+                    if (atDmg < 1) atDmg = 1;
+
+                    p.Hp -= atDmg;
+
+                    AddBattleMessageHistory($"{enemy.Name} did {atDmg}dmg!", true);
+
+                    break;
+                case EnemyBattleState.Run:
+                    var mapPosition = p.GetGameObjectPosition();
+                    map[(int)mapPosition.X, (int)mapPosition.Y].RemoveGameObject(enemy);
+                    enemy.Hp = -1;
                     break;
             }
         }
@@ -547,27 +616,27 @@ namespace TextAdventureGame
         private static EnemyBattleState EnemyBattleAction(EnemyBattleAIState ai)
         {
             // Base odds
-            (EnemyBattleState, double)[] odds = new[] { (EnemyBattleState.Atack, 3), (EnemyBattleState.Defend, 0.5), (EnemyBattleState.Run, 0.0) };
+            (EnemyBattleState, double)[] odds = new[] { (EnemyBattleState.Attack, 3), (EnemyBattleState.Defend, 0.5), (EnemyBattleState.Run, 0.0) };
 
             switch (ai)
             {
                 case EnemyBattleAIState.Defensive:
                     odds = new[] {
-                        (EnemyBattleState.Atack, 1.0),
+                        (EnemyBattleState.Attack, 1.0),
                         (EnemyBattleState.Defend, 3.0),
                         (EnemyBattleState.Run, 0.0)
                     };
                     break;
                 case EnemyBattleAIState.Coward:
                     odds = new[] {
-                        (EnemyBattleState.Atack, 0.0),
+                        (EnemyBattleState.Attack, 0.0),
                         (EnemyBattleState.Defend, 0.0),
                         (EnemyBattleState.Run, 1.0)
                     };
                     break;
                 case EnemyBattleAIState.Random:
                     odds = new[] {
-                        (EnemyBattleState.Atack, 1.0),
+                        (EnemyBattleState.Attack, 1.0),
                         (EnemyBattleState.Defend, 1.0),
                         (EnemyBattleState.Run, 0.0)
                     };
@@ -594,9 +663,11 @@ namespace TextAdventureGame
             return odds.Last().Item1;
         }
 
-        private static T DrawBattleMenu(int battleMenuPosition, T currentBattleOption)
+        private static BattleOption DrawBattleMenu(int battleMenuPosition, BattleOption currentBattleOption)
         {
-            T[] arr = (T[])Enum.GetValues(currentBattleOption.GetType());
+            BattleOption[] arr = (BattleOption[])Enum.GetValues(currentBattleOption.GetType());
+
+            Console.SetCursorPosition(0, 1);
 
             for (int i = 0; i < arr.Length; i++)
             {
@@ -617,7 +688,7 @@ namespace TextAdventureGame
             return currentBattleOption;
         }
 
-        static void PlayerInventory() {
+        static void PlayerInventory(GameState currentGameState) {
             gameState = GameState.InInventory;
             Console.Clear();
 
@@ -645,11 +716,14 @@ namespace TextAdventureGame
                     case ConsoleKey.E:
                     case ConsoleKey.Escape:
                         Console.Clear();
-                        gameState = GameState.InDungeon;
                         return;
                     case ConsoleKey.Z:
                     case ConsoleKey.F:
-                        try { p.GetItems()[inventoryCursorPositon].UseItem(p); } catch { break; }
+                        try { 
+                            if(p.GetItems()[inventoryCursorPositon].UseItem(p, (PickUpItem)p.GetItems()[inventoryCursorPositon], currentGameState)) {
+                                if (currentGameState == GameState.InBattle) goto EndInventory;
+                            } } catch { break; }
+
                         DrawInventory(inventoryCursorPositon);
                         break;
                     default:
@@ -659,6 +733,9 @@ namespace TextAdventureGame
 
                 Console.SetCursorPosition(0, 0);
             }
+
+            EndInventory:;
+            Console.Clear();
         }
 
         static void PickUpNewItem(Vector2 pPosition)
@@ -668,7 +745,7 @@ namespace TextAdventureGame
 
             if(item != null) {
                 AddMessageHistory($"You picked up {item.Qty}x {item.Name}", true);
-                p.AddItem(item);
+                p.AddItem((PickUpItem)item);
                 mapPosition.RemoveGameObject(item);
             }
 
@@ -834,11 +911,24 @@ namespace TextAdventureGame
                 }
             }
 
-            PickUpItem[] itemList = new PickUpItem[] { new HealthPotion("Health Potion", r.Next(1, 2)), new PickUpItem("Junk", r.Next(1, 5)) };
+            PickUpItem[] itemList = new PickUpItem[] { 
+                new HealthPotion("Health Potion", r.Next(1, 2)), 
+                new PickUpItem("Junk", r.Next(1, 5)) 
+            };
 
             // Add pickup items
             for (int i = 0; i < pui.Length; i++) {
-                pui[i] = itemList[r.Next(0, itemList.Length)];
+                int index = r.Next(0, itemList.Length);
+                pui[i] = itemList[index];
+
+                switch (pui[i].MyItemType)
+                {
+                    case PickUpItem.ItemType.HealthPotion:
+                        pui[i] = new HealthPotion(itemList[index]);
+                        break;
+                    default:
+                        break;
+                }
 
                 while(true) {
                     var randomPosition = new Vector2(r.Next(1, rowUserInputSize - 1), r.Next(1, colUserInputSize - 1));
@@ -850,10 +940,11 @@ namespace TextAdventureGame
             }
 
             Enemy[] enemyList = new Enemy[] {
-                new Spider(r.Next(1, 4), 10, 4, "Spider", EnemyBattleAIState.Brute),
-                new Mimic(r.Next(3, 6), 15, 10, "Mimic", EnemyBattleAIState.Defensive),
+                new Spider(r.Next(4, 6), 10, 4, "Spider", EnemyBattleAIState.Brute),
+                new Mimic(r.Next(3, 6), 15, 7, "Mimic", EnemyBattleAIState.Defensive),
                 new Rat(1, 3, 0, "Rat", EnemyBattleAIState.Coward),
-                new Skeleton(r.Next(2, 5), 10, 5, "Skeleton", EnemyBattleAIState.Random)
+                new Skeleton(r.Next(4, 5), 10, 5, "Skeleton", EnemyBattleAIState.Random),
+                new Bat(3, r.Next(6, 10), 5, "Bat", EnemyBattleAIState.Brute)
             };
 
             // Add enemies
@@ -876,6 +967,9 @@ namespace TextAdventureGame
                     case Enemy.Species.Skeleton:
                         e[i] = new Skeleton(enemyList[index]);
                         break;
+                    case Enemy.Species.Bat:
+                        e[i] = new Bat(enemyList[index]);
+                        break;
                 }
 
                 while (true) {
@@ -888,106 +982,11 @@ namespace TextAdventureGame
             }
         }
 
-        static void DrawDungeon() {
-            for (int col = 0; col < colUserInputSize; col++) {
-                for (int row = 0; row < rowUserInputSize; row++) {
-                    map[row, col].Draw();
-                }
-                Console.WriteLine();
-            }
-        }
-
-        private static void DrawMainMenu(int menuCursorPosition)
-        {
-            Console.SetCursorPosition(0, 0);
-            Console.Write("Title here:");
-            MenuButtonState[] arr = (MenuButtonState[])Enum.GetValues(MenuButtonState.Start.GetType());
-
-            for (int i = 0; i < 4; i++)
-            {
-                if (i == menuCursorPosition) {
-                    Console.BackgroundColor = ConsoleColor.Gray;
-                    Console.ForegroundColor = ConsoleColor.Black;
-                } else {
-                    Console.ResetColor();
-                }
-
-
-                Console.SetCursorPosition(rowUserInputSize - (arr[i].ToString().Length / 2), 10 + i + i);
-                Console.WriteLine(arr[i].ToString());
-                Console.ResetColor();
-            }
-        }
-
-        private static void DrawCredits()
-        {
-            Console.Clear();
-            Console.SetCursorPosition(12, 10);
-            Console.Write("Created by Akiro Ames");
-            Console.ReadKey(true);
-        }
-
-        private static void DrawLegend()
-        {
-            Console.Clear();
-            Console.Write("Game legend here\n");
-
-            Console.BackgroundColor = ConsoleColor.Green;
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write("  ");
-            Console.ResetColor();
-
-            Console.WriteLine(" - Player");
-
-            Console.WriteLine("oD - Spider");
-            Console.WriteLine("o/ - Rat");
-            Console.WriteLine("[] - Mimic");
-            Console.WriteLine("{8 - Skeleton");
-
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.Write("? ");
-            Console.ResetColor();
-            Console.WriteLine("- Random Item");
-
-            Console.WriteLine("D| - Locked exit");
-
-            Console.ReadKey(true);
-        }
-
-        static void DrawInventory(int inventoryCursor) {
-            Console.SetCursorPosition(0, 0);
-            Console.Write("Inventory\n");
-
-            var items = p.GetItems();
-
-            for (int i = 0; i < items.Length; i++)
-            {
-                if (i == inventoryCursor) {
-                    Console.BackgroundColor = ConsoleColor.Gray;
-                    Console.ForegroundColor = ConsoleColor.Black;
-                } else {
-                    Console.ResetColor();
-                }
-
-                Console.WriteLine($"{items[i].Qty}x {items[i].Name}");
-                Console.ResetColor();
-            }
-        }
-
-        static void WriteControls() {
-            Console.SetCursorPosition(10, 31);
-            Console.BackgroundColor = ConsoleColor.White;
-            Console.ForegroundColor = ConsoleColor.Black;
-            Console.Write("   W    E < inventory ");
-            Console.SetCursorPosition(10, 32);
-            Console.Write(" A S D    F < pickup  ");
-            Console.ResetColor();
-        }
-
         static void InitTimer() {
             timer = new Timer(TimerCallback, null, 1000, 1000);
 
         }
+
         public static void TimerCallback(Object stateinfo) {
             if(gameState == GameState.InDungeon) { 
                 EnemyAction();

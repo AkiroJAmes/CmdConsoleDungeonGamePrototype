@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-using static TextAdventureGame.Program;
+using static AdventureGame.Program;
 
-namespace TextAdventureGame
+namespace AdventureGame
 {
     abstract class Character : GameObject
     {
@@ -38,8 +38,19 @@ namespace TextAdventureGame
 
         public override string Name { get { return NAME; } }
 
-        public int At { get; }
-        public int Df { get; }
+        public int At
+        {
+            get
+            {
+                return AT;
+            }
+        }
+
+        public int Df { get
+            {
+                return DF;
+            }
+        }
     }
 
     class Player : Character
@@ -47,6 +58,11 @@ namespace TextAdventureGame
         protected int LVL;
         protected int EXP;
         List<GameObject> ITEMS = new List<GameObject>();
+
+        public Player()
+        {
+
+        }
 
         public Player(int at, int hp, int df, int exp, int lvl) {
             this.AT = at;
@@ -103,7 +119,7 @@ namespace TextAdventureGame
             GetEXP();
         }
 
-        public void AddItem(GameObject item) {
+        public void AddItem(PickUpItem item) {
             for (int i = 0; i < this.ITEMS.Count; i++)
             {
                 // Add item to stack with existing items
@@ -122,6 +138,8 @@ namespace TextAdventureGame
             {
                 if(item.Name == removeItem.Name) {
                     ITEMS.Remove(item);
+                    if(Program.gameState == GameState.InInventory)
+                        Console.Clear();
                     return;
                 }
             }
@@ -135,12 +153,21 @@ namespace TextAdventureGame
         protected EnemyBattleAIState AI;
         public Species MySpecies { get; protected set; }
 
+        public Enemy() { }
+
+        public Enemy(int at, int hp, int df) {
+            this.AT = at;
+            this.HP = hp;
+            this.DF = df;
+        }
+
         public enum Species
         {
             Spider,
             Mimic,
             Rat,
-            Skeleton
+            Skeleton,
+            Bat
         }
 
         public override bool IsEnemy()
@@ -171,6 +198,10 @@ namespace TextAdventureGame
         }
 
         public virtual bool ISActive { set { } }
+
+        public virtual void Sprite() {
+            Console.Write("");
+        }
     }
 
     class Spider : Enemy
@@ -200,6 +231,18 @@ namespace TextAdventureGame
         public override void Draw()
         {
             Console.Write("oD");
+        }
+
+        public override void Sprite()
+        {
+            var cursorLeftRef = Console.CursorLeft;
+            Console.Write(@"'    '   ' '");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@" /`88| '\ \ ");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"     (   )  ");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"      ___   ");
         }
     }
 
@@ -240,6 +283,21 @@ namespace TextAdventureGame
             }
         }
 
+        public override void Sprite()
+        {
+            var cursorLeftRef = Console.CursorLeft;
+
+            Console.Write(@"|___\)___|/");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"|   /(   ||");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@" /_"".':'_/|");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@" \ _VvV__\");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"O_______o");
+        }
+
         public override bool ISActive { set { IsActive = value; } }
     }
 
@@ -271,6 +329,18 @@ namespace TextAdventureGame
         {
             Console.Write("o/");
         }
+
+        public override void Sprite()
+        {
+            var cursorLeftRef = Console.CursorLeft;
+            Console.Write(@""" ` "" """);
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@">' '<  (__.""`");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"(\./)     \_._.-");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"     ,---,");
+        }
     }
 
     class Skeleton : Enemy
@@ -300,6 +370,63 @@ namespace TextAdventureGame
         public override void Draw()
         {
             Console.Write("{8");
+        }
+
+        public override void Sprite()
+        {
+            var cursorLeftRef = Console.CursorLeft;
+
+            Console.Write(@"  \|_(_(");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@" | | =|= (,");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"(!\_/_|_`\");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@" | | _|._");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"  /|(:. )");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"     ___");
+        }
+    }
+
+    class Bat : Enemy
+    {
+        public Bat(int at, int hp, int df, string name, EnemyBattleAIState ai)
+        {
+            this.AT = at;
+            this.MAXHP = hp;
+            this.HP = hp;
+            this.DF = df;
+            this.NAME = name;
+            this.AI = ai;
+            MySpecies = Species.Bat;
+        }
+
+        public Bat(Enemy copy)
+        {
+            this.AT = copy.At;
+            this.MAXHP = copy.MaxHP;
+            this.HP = copy.Hp;
+            this.DF = copy.Df;
+            this.NAME = copy.Name;
+            this.AI = copy.Ai;
+            MySpecies = copy.MySpecies;
+        }
+
+        public override void Draw()
+        {
+            Console.Write(@"\/");
+        }
+
+        public override void Sprite()
+        {
+            var cursorLeftRef = Console.CursorLeft;
+            Console.Write(@"  ""-'");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"`\,,/'");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop - 1);
+            Console.Write(@"_    _");
         }
     }
 }

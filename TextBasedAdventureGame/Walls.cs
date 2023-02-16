@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TextAdventureGame
+namespace AdventureGame
 {
     class Wall : GameObject
     {

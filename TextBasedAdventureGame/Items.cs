@@ -2,18 +2,28 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TextAdventureGame
+namespace AdventureGame
 {
     class PickUpItem : GameObject
     {
         protected string NAME;
         protected int QTY;
 
+        public ItemType MyItemType { get; set; }
+
+        public enum ItemType { 
+            Junk,
+            HealthPotion,
+            Key
+        }
+
         public PickUpItem(string name, int qty)
         {
             this.NAME = name;
             this.QTY = qty;
         }
+
+        public PickUpItem() { }
 
         public override string Name
         {
@@ -48,9 +58,10 @@ namespace TextAdventureGame
             return true;
         }
 
-        public override void UseItem(Player player)
+        public override bool UseItem(Player player, PickUpItem item, Program.GameState gameState)
         {
             Console.Write("Cannot use this item");
+            return false;
         }
     }
 
@@ -60,28 +71,41 @@ namespace TextAdventureGame
         {
             this.NAME = name;
             this.QTY = qty;
+            MyItemType = ItemType.HealthPotion;
         }
 
-        public override void UseItem(Player player)
+        public HealthPotion(PickUpItem copy)
+        {
+            this.NAME = copy.Name;
+            this.QTY = copy.Qty;
+            MyItemType = copy.MyItemType;
+        }
+
+        public override bool UseItem(Player player, PickUpItem item, Program.GameState gameState)
         {
             if (player.Hp >= player.MaxHP)
             {
                 Console.Write("You are already at max health!");
-                return;
+                return false;
             }
 
 
-            player.Hp += 5;
+            player.Hp += 10;
             if (player.Hp >= player.MaxHP) player.Hp = player.MaxHP;
 
             this.QTY -= 1;
 
-            if (this.QTY <= 0) player.RemoveItem(this);
+            if (this.QTY <= 0) {
+                player.RemoveItem(item);
+                this.Qty = 1;
+            }
 
-            this.Qty = 1;
+            if(gameState == Program.GameState.InBattle)
+                Program.AddBattleMessageHistory("Restored 10 health", true);
+            if (gameState == Program.GameState.InDungeon)
+                Program.AddMessageHistory("Restored 10 health", false);
 
-            Console.Write("Restored 5 health");
-            Program.AddMessageHistory("Restored 5 health", false);
+            return true;
         }
 
         public override void Draw()
@@ -98,6 +122,14 @@ namespace TextAdventureGame
         {
             this.NAME = name;
             this.QTY = qty;
+            MyItemType = ItemType.Key;
+        }
+
+        public Key(PickUpItem copy)
+        {
+            this.NAME = copy.Name;
+            this.QTY = copy.Qty;
+            MyItemType = copy.MyItemType;
         }
 
         public override void Draw()

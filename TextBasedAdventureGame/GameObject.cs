@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 
-namespace TextAdventureGame
+namespace AdventureGame
 {
     abstract class GameObject
     {
@@ -45,7 +45,7 @@ namespace TextAdventureGame
             return new Vector2(xPosition, yPosition);
         }
 
-        public virtual void UseItem(Player player) { }
+        public virtual bool UseItem(Player player, PickUpItem item, Program.GameState gameState) { return false; }
 
         public virtual int Hp { get; set; }
 

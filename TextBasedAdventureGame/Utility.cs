@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-using static TextAdventureGame.Program;
+using static AdventureGame.Program;
 
-namespace TextAdventureGame
+namespace AdventureGame
 {
     class Utility
     {
