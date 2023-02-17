@@ -22,11 +22,11 @@ namespace AdventureGame
         static Enemy[] e;
         public static Player p;
 
-        static int levelTrack = -1;
+        static int levelTrack;
 
         static Timer timer;
         public static string[] dungeonMessages;
-        public static string[] battleMessages = new string[] { null, null, null };
+        public static string[] battleMessages;
 
         public static GameState gameState;
 
@@ -81,7 +81,9 @@ namespace AdventureGame
 
             while (true) {
                 dungeonMessages = new string[] { "Explore the dungeon...", null, null };
+                battleMessages = new string[] { null, null, null };
                 gameState = GameState.NewGame;
+                levelTrack = -1;
                 DrawMainMenu(menuCursorPosition);
                 var key = Console.ReadKey(true).Key;
 
