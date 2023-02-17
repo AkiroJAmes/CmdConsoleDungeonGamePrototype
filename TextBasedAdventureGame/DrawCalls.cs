@@ -23,8 +23,6 @@ namespace AdventureGame
         {
             BattleOption[] arr = (BattleOption[])Enum.GetValues(currentBattleOption.GetType());
 
-            Console.SetCursorPosition(0, 1);
-
             for (int i = 0; i < arr.Length; i++)
             {
                 if (i == battleMenuPosition)
@@ -37,7 +35,8 @@ namespace AdventureGame
                     Console.ResetColor();
                 }
 
-                Console.WriteLine($"\r{arr[i]}");
+                Console.SetCursorPosition(25, 14 + i);
+                Console.WriteLine($"{arr[i]}");
                 Console.ResetColor();
             }
 
@@ -53,7 +52,7 @@ namespace AdventureGame
                 Console.SetCursorPosition(0, 0);
                 DrawDungeon(map, colUserInputSize, rowUserInputSize);
                 p.WriteStats();
-                DrawMessageHistoryBox();
+                DrawBox(5, 40, 2, 25);
                 DrawMessageHistory();
                 WriteControls();
             }
@@ -124,32 +123,37 @@ namespace AdventureGame
 
         public static void DrawBattleScreen(Enemy enemy)
         {
-            DrawBattleMessageHistoryBox();
+            DrawBox(5, 40, 2, 25);
             DrawBattleMessageHistory();
             p.WriteStats();
 
-            Console.SetCursorPosition(25, 3);
-            Console.Write($"{enemy.Name}: {enemy.Hp} HP     ");
+            DrawBox(18, 42, 1, 1);
 
-            Console.SetCursorPosition(25, 10);
+            Console.SetCursorPosition(24, 9);
+            Console.Write($"{enemy.Name}: {enemy.Hp} HP   ");
+
+            Console.SetCursorPosition(25, 7);
             enemy.Sprite();
+
+            Console.SetCursorPosition(5, 12);
+            p.Sprite();
         }
 
-        public static void DrawMessageHistoryBox() {
-            for (int i = 0; i < 40; i++)
+        public static void DrawBox(int height, int width, int left, int top) {
+            for (int i = 0; i < width; i++)
             {
-                for (int j = 0; j < 5; j++)
+                for (int j = 0; j < height; j++)
                 {
-                    Console.SetCursorPosition(2 + i, 25 + j);
-                    if((i == 0 && j == 0) || (i == 0 && j == 4) || (i == 39 && j == 0) || (i == 39 && j == 4)) {
+                    Console.SetCursorPosition(left + i, top + j);
+                    if((i == 0 && j == 0) || (i == 0 && j == height - 1) || (i == width - 1 && j == 0) || (i == width - 1 && j == height - 1)) {
                         Console.Write(" ");
                         continue;
                     }
 
                     if (i == 0) Console.Write("|");
-                    if (i == 39) Console.Write("|");
+                    if (i == width - 1) Console.Write("|");
                     if (j == 0) Console.Write("-");
-                    if (j == 4) Console.Write("-");
+                    if (j == height -1) Console.Write("-");
                 }
             }
         }
@@ -163,25 +167,6 @@ namespace AdventureGame
                     Console.Write("                                     ");
                     Console.SetCursorPosition(4, 26 + i);
                     Console.Write(dungeonMessages[i]);
-                }
-            }
-        }
-
-        public static void DrawBattleMessageHistoryBox() {
-            for (int i = 0; i < 40; i++)
-            {
-                for (int j = 0; j < 5; j++)
-                {
-                    Console.SetCursorPosition(2 + i, 25 + j);
-                    if((i == 0 && j == 0) || (i == 0 && j == 4) || (i == 39 && j == 0) || (i == 39 && j == 4)) {
-                        Console.Write(" ");
-                        continue;
-                    }
-
-                    if (i == 0) Console.Write("|");
-                    if (i == 39) Console.Write("|");
-                    if (j == 0) Console.Write("-");
-                    if (j == 4) Console.Write("-");
                 }
             }
         }

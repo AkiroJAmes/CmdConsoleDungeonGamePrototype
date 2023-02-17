@@ -146,6 +146,22 @@ namespace AdventureGame
         }
 
         public GameObject[] GetItems() { return this.ITEMS.ToArray(); }
+
+        internal void Sprite()
+        {
+            var cursorLeftRef = Console.CursorLeft;
+            Console.Write(@"     /\");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop + 1);
+            Console.Write(@" __ /`'\ __    /|");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop + 1);
+            Console.Write(@"(  /`  '\  )  //");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop + 1);
+            Console.Write(@" `'-_  _-'`  //");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop + 1);
+            Console.Write(@"  ('    .\('))");
+            Console.SetCursorPosition(cursorLeftRef, Console.CursorTop + 1);
+            Console.Write(@"   |._  \ ,./`");
+        }
     }
 
     class Enemy : Character
