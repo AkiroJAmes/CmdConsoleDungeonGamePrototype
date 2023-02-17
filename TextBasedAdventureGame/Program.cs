@@ -498,8 +498,12 @@ namespace AdventureGame
 
                         Console.ReadKey(true);
 
-                        FightSequence((Enemy)enemy, enemy);
-                        if (gameState == GameState.Dead) return;
+                        FightSequence(enemy, enemy);
+                        if (gameState == GameState.Dead)
+                        {
+                            timer.Dispose();
+                            return;
+                        }
 
                         gameState = GameState.InDungeon;
                     }
