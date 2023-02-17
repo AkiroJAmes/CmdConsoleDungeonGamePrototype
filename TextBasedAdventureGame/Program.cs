@@ -826,7 +826,7 @@ namespace AdventureGame
                 mapPosition.RemoveGameObject(item);
             }
 
-            if (map[(int)pPosition.X + 1, (int)pPosition.Y].CheckIfKeyWall())
+            if (pPosition.X + 1 < rowUserInputSize && map[(int)pPosition.X + 1, (int)pPosition.Y].CheckIfKeyWall())
             {
                 var items = p.GetItems();
 
