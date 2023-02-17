@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
 
 using static AdventureGame.Program;
@@ -18,7 +19,32 @@ namespace AdventureGame
             }
         }
 
-                // Prevent draw call overlap with lock
+        public static BattleOption DrawBattleMenu(int battleMenuPosition, BattleOption currentBattleOption)
+        {
+            BattleOption[] arr = (BattleOption[])Enum.GetValues(currentBattleOption.GetType());
+
+            Console.SetCursorPosition(0, 1);
+
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (i == battleMenuPosition)
+                {
+                    Console.BackgroundColor = ConsoleColor.Gray;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                }
+                else
+                {
+                    Console.ResetColor();
+                }
+
+                Console.WriteLine($"\r{arr[i]}");
+                Console.ResetColor();
+            }
+
+            return currentBattleOption;
+        }
+
+        // Prevent draw call overlap with lock
         private static readonly object myLock = new object();
 
         public static void DrawMainDungeonScreen(Room[,] map, int colUserInputSize, int rowUserInputSize)
@@ -85,6 +111,28 @@ namespace AdventureGame
                 Console.WriteLine(arr[i].ToString());
                 Console.ResetColor();
             }
+        }
+
+        public static void RedrawObject(Vector2 position, Vector2 newPosition)
+        {
+            Console.SetCursorPosition((int)position.X * 2, (int)position.Y);
+            map[(int)position.X, (int)position.Y].Draw();
+
+            Console.SetCursorPosition((int)newPosition.X * 2, (int)newPosition.Y);
+            map[(int)newPosition.X, (int)newPosition.Y].Draw();
+        }
+
+        public static void DrawBattleScreen(Enemy enemy)
+        {
+            DrawBattleMessageHistoryBox();
+            DrawBattleMessageHistory();
+            p.WriteStats();
+
+            Console.SetCursorPosition(25, 3);
+            Console.Write($"{enemy.Name}: {enemy.Hp} HP     ");
+
+            Console.SetCursorPosition(25, 10);
+            enemy.Sprite();
         }
 
         public static void DrawMessageHistoryBox() {

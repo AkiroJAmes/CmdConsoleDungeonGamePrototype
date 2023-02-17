@@ -152,6 +152,7 @@ namespace AdventureGame
     {
         protected EnemyBattleAIState AI;
         public Species MySpecies { get; protected set; }
+        protected int MyViewDistance;
 
         public Enemy() { }
 
@@ -199,6 +200,8 @@ namespace AdventureGame
 
         public virtual bool ISActive { set { } }
 
+        public virtual int ViewDistance { get { return MyViewDistance; } }
+
         public virtual void Sprite() {
             Console.Write("");
         }
@@ -206,7 +209,7 @@ namespace AdventureGame
 
     class Spider : Enemy
     {
-        public Spider(int at, int hp, int df, string name, EnemyBattleAIState ai)
+        public Spider(int at, int hp, int df, string name, int viewDistance, EnemyBattleAIState ai)
         {
             this.AT = at;
             this.MAXHP = hp;
@@ -214,6 +217,7 @@ namespace AdventureGame
             this.DF = df;
             this.NAME = name;
             this.AI = ai;
+            this.MyViewDistance = viewDistance;
             MySpecies = Species.Spider;
         }
 
@@ -225,6 +229,7 @@ namespace AdventureGame
             this.DF = copy.Df;
             this.NAME = copy.Name;
             this.AI = copy.Ai;
+            this.MyViewDistance = copy.ViewDistance;
             MySpecies = copy.MySpecies;
         }
 
@@ -250,7 +255,7 @@ namespace AdventureGame
     {
         protected bool IsActive = false;
 
-        public Mimic(int at, int hp, int df, string name, EnemyBattleAIState ai)
+        public Mimic(int at, int hp, int df, string name, int viewDistance, EnemyBattleAIState ai)
         {
             this.AT = at;
             this.MAXHP = hp;
@@ -258,6 +263,7 @@ namespace AdventureGame
             this.DF = df;
             this.NAME = name;
             this.AI = ai;
+            this.MyViewDistance = viewDistance;
             MySpecies = Species.Mimic;
         }
 
@@ -269,6 +275,7 @@ namespace AdventureGame
             this.DF = copy.Df;
             this.NAME = copy.Name;
             this.AI = copy.Ai;
+            this.MyViewDistance = copy.ViewDistance;
             MySpecies = copy.MySpecies;
         }
 
@@ -303,7 +310,7 @@ namespace AdventureGame
 
     class Rat : Enemy
     {
-        public Rat(int at, int hp, int df, string name, EnemyBattleAIState ai)
+        public Rat(int at, int hp, int df, string name, int viewDistance, EnemyBattleAIState ai)
         {
             this.AT = at;
             this.MAXHP = hp;
@@ -311,7 +318,8 @@ namespace AdventureGame
             this.DF = df;
             this.NAME = name;
             this.AI = ai;
-            MySpecies= Species.Rat;
+            this.MyViewDistance = viewDistance;
+            MySpecies = Species.Rat;
         }
 
         public Rat(Enemy copy)
@@ -322,6 +330,7 @@ namespace AdventureGame
             this.DF = copy.Df;
             this.NAME = copy.Name;
             this.AI = copy.Ai;
+            this.MyViewDistance = copy.ViewDistance;
             MySpecies = copy.MySpecies;
         }
 
@@ -345,7 +354,7 @@ namespace AdventureGame
 
     class Skeleton : Enemy
     {
-        public Skeleton(int at, int hp, int df, string name, EnemyBattleAIState ai)
+        public Skeleton(int at, int hp, int df, string name, int viewDistance, EnemyBattleAIState ai)
         {
             this.AT = at;
             this.MAXHP = hp;
@@ -353,6 +362,7 @@ namespace AdventureGame
             this.DF = df;
             this.NAME = name;
             this.AI = ai;
+            this.MyViewDistance = viewDistance;
             MySpecies = Species.Skeleton;
         }
 
@@ -364,6 +374,7 @@ namespace AdventureGame
             this.DF = copy.Df;
             this.NAME = copy.Name;
             this.AI = copy.Ai;
+            this.MyViewDistance = copy.ViewDistance;
             MySpecies = copy.MySpecies;
         }
 
@@ -392,7 +403,7 @@ namespace AdventureGame
 
     class Bat : Enemy
     {
-        public Bat(int at, int hp, int df, string name, EnemyBattleAIState ai)
+        public Bat(int at, int hp, int df, string name, int viewDistance, EnemyBattleAIState ai)
         {
             this.AT = at;
             this.MAXHP = hp;
@@ -400,6 +411,7 @@ namespace AdventureGame
             this.DF = df;
             this.NAME = name;
             this.AI = ai;
+            this.MyViewDistance = viewDistance;
             MySpecies = Species.Bat;
         }
 
@@ -411,6 +423,7 @@ namespace AdventureGame
             this.DF = copy.Df;
             this.NAME = copy.Name;
             this.AI = copy.Ai;
+            this.MyViewDistance = copy.ViewDistance;
             MySpecies = copy.MySpecies;
         }
 

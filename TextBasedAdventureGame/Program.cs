@@ -5,10 +5,10 @@ using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Security;
 using System.Threading;
 
 using static AdventureGame.DrawCalls;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace AdventureGame
 {
@@ -17,21 +17,27 @@ namespace AdventureGame
         static int rowUserInputSize = 22;
         static int colUserInputSize = 22;
 
-        static Room[,] map;
+        public static Room[,] map;
+        static object[] maps = new object[0];
         static Enemy[] e;
         public static Player p;
 
+        static int levelTrack = -1;
+
         static Timer timer;
-        public static string[] dungeonMessages = new string[] { "Explore the dungeon...", null, null };
+        public static string[] dungeonMessages;
         public static string[] battleMessages = new string[] { null, null, null };
 
         public static GameState gameState;
 
         public enum GameState 
         {
+            NewGame,
             InDungeon,
             InInventory,
-            InBattle
+            InBattle,
+            Dead,
+            Escaped,
         }
 
         public enum MenuButtonState
@@ -74,6 +80,8 @@ namespace AdventureGame
             MenuButtonState currenMenuOption = MenuButtonState.Start;
 
             while (true) {
+                dungeonMessages = new string[] { "Explore the dungeon...", null, null };
+                gameState = GameState.NewGame;
                 DrawMainMenu(menuCursorPosition);
                 var key = Console.ReadKey(true).Key;
 
@@ -109,28 +117,47 @@ namespace AdventureGame
             switch (currenMenuOption)
             {
                 case MenuButtonState.Start:
+                    do {
+                        if (gameState == GameState.Escaped || gameState == GameState.NewGame) {
+                            levelTrack++;
+                            var mapsRef = maps;
+                            maps = new object[maps.Length + 1];
 
-                    while (true) {
-                        gameState = GameState.InDungeon;
+                            for (int i = 0; i < mapsRef.Length; i++) {
+                                maps[i] = mapsRef[i];
+                            }
+
+                            map = new Room[rowUserInputSize, colUserInputSize];
+
+                            maps[maps.Length - 1] = map;
+                        }
+
+                        map = (Room[,])maps[levelTrack];
+
+                        if(gameState == GameState.NewGame)
+                            p = new Player(5, 10, 5, 0, 1);
 
                         Console.Clear();
 
-                        map = new Room[rowUserInputSize, colUserInputSize];
-                        CreateDungeonRooms();
+                        if(gameState == GameState.NewGame || gameState == GameState.Escaped) {
+                            CreateDungeonRooms();
+                            var r = new Random();
+                            e = new Enemy[r.Next(2, 4)];
+                            PowerUp[] pu = new PowerUp[r.Next(0, 2)];
+                            PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
 
+                            AddGameObjects(pu, pui);
 
-                        var r = new Random();
-                        p = new Player(5, 10, 5, 0, 1);
-                        e = new Enemy[r.Next(2, 4)];
-                        PowerUp[] pu = new PowerUp[r.Next(0, 2)];
-                        PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
+                            InitTimer();
+                        }
 
-                        AddGameObjects(pu, pui);
-                        InitTimer();
-                        GameLoop(pu, pui);
+                        gameState = GameState.InDungeon;
 
-                        break;
-                    }
+                        GameLoop();
+
+                        Console.Clear();
+
+                    } while (gameState == GameState.Escaped);
 
                     break;
                 case MenuButtonState.Legends:
@@ -149,14 +176,14 @@ namespace AdventureGame
             Console.Clear();
         }
 
-        static void GameLoop(PowerUp[] pu, PickUpItem[] pui)
+        static void GameLoop()
         {
             Vector2 newPlayerPosition = Vector2.Zero;
             Vector2 playerPositionLastTurn = Vector2.Zero;
 
             DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
 
-            while (true) {
+            while (gameState != GameState.Dead) {
                 if(gameState == GameState.InDungeon) { 
                     var pPosition = p.GetGameObjectPosition();
 
@@ -204,13 +231,23 @@ namespace AdventureGame
                             break;
                     }
 
+
+                    if (newPlayerPosition.X == rowUserInputSize) {
+                        gameState = GameState.Escaped;
+                        map[(int)pPosition.X, (int)pPosition.Y].RemoveGameObject(p);
+                        timer.Dispose();
+                        return;
+                    }
+
+                    if(newPlayerPosition.X == - 1) {
+                        AddMessageHistory("The way back is blocked", true);
+                        continue;
+                    }
+
                     // Check if new player position is valid
-                    var mapPosition = map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y];
+                    Room mapPosition = map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y];
 
                     if (!mapPosition.CheckIfEmpty() && mapPosition.CheckIfWall()) {
-/*                        Console.WriteLine($"You attempted to move to {newPlayerPosition} but there is a wall there");
-                        Console.ReadKey();
-                        Console.SetCursorPosition(0, 0);*/
                         continue;
                     }
 
@@ -229,15 +266,19 @@ namespace AdventureGame
                     }
 
                     if (!mapPosition.CheckIfEmpty() && gameState != GameState.InBattle) {
-                        GameObject e = mapPosition.CheckIfEnemy();
+                        Enemy e = (Enemy)mapPosition.CheckIfEnemy();
                         if (e != null) {
                             RedrawObject(pPosition, newPlayerPosition);
                             gameState = GameState.InBattle;
-                            AddMessageHistory($"You attacked {e.Name}!", true);
+                            if(e.MySpecies == Enemy.Species.Mimic) {
+                                AddMessageHistory($"{e.Name} attcked you!", true);
+                            } else 
+                                AddMessageHistory($"You attacked {e.Name}!", true);
 
                             Console.ReadKey(true);
 
-                            FightSequence((Enemy)e, p);
+                            FightSequence(e, p);
+                            if (gameState == GameState.Dead) return;
 
                             gameState = GameState.InDungeon;
                         }
@@ -252,15 +293,6 @@ namespace AdventureGame
                     RedrawObject(pPosition, newPlayerPosition);
                 }
             }
-        }
-
-        private static void RedrawObject(Vector2 position, Vector2 newPosition)
-        {
-            Console.SetCursorPosition((int)position.X * 2, (int)position.Y);
-            map[(int)position.X, (int)position.Y].Draw();
-
-            Console.SetCursorPosition((int)newPosition.X * 2, (int)newPosition.Y);
-            map[(int)newPosition.X, (int)newPosition.Y].Draw();
         }
 
         public static void AddMessageHistory(string newMessage, bool redraw) {
@@ -316,7 +348,6 @@ namespace AdventureGame
             if (redraw)
                 DrawBattleMessageHistory();
         }
-              
 
         private static void EnemyAction()
         {
@@ -326,25 +357,99 @@ namespace AdventureGame
                     var playerPosition = p.GetGameObjectPosition();
 
                     // How far the enemy can see the player
-                    var enemyViewDistance = 0;
+                    var enemyViewDistance = enemy.ViewDistance;
 
                     var newPosition = currentPosition;
                     var r = new Random();
 
                     // Move towards the player otherwise choose a random direction
                     if(Vector2.Distance(currentPosition, playerPosition) < enemyViewDistance) {
-                        if(enemy.MySpecies == Enemy.Species.Mimic) {
-                            enemy.ISActive = true;
+                        for (int i = 0; i < 10; i++)
+                        {
+                            switch (enemy.MySpecies)
+                            {
+                                case Enemy.Species.Spider:
+                                    if (playerPosition.Y < currentPosition.Y && playerPosition.X > currentPosition.X)
+                                    {
+                                        newPosition = currentPosition + new Vector2(1, -1);
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(-1, 1);
+                                    }
+                                    else if (playerPosition.Y < currentPosition.Y && playerPosition.X < currentPosition.X)
+                                    {
+                                        newPosition = currentPosition + -Vector2.One;
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(1, -1);
+                                    }
+                                    else if (playerPosition.Y < currentPosition.Y && playerPosition.X == currentPosition.X) {
+                                        newPosition = currentPosition + -Vector2.One;
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(1, -1);
+                                    }
+                                    else if (playerPosition.Y > currentPosition.Y && playerPosition.X == currentPosition.X)
+                                    {
+                                        newPosition = currentPosition + Vector2.One;
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(-1, 1);
+                                    }
+                                    else if (playerPosition.Y == currentPosition.Y && playerPosition.X > currentPosition.X)
+                                    {
+                                        newPosition = currentPosition + Vector2.One;
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(-1, 1);
+                                    }
+                                    else if (playerPosition.Y == currentPosition.Y && playerPosition.X < currentPosition.X)
+                                    {
+                                        newPosition = currentPosition + -Vector2.One;
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(1, -1);
+                                    }
+                                    else if (playerPosition.Y > currentPosition.Y && playerPosition.X > currentPosition.X)
+                                    {
+                                        newPosition = currentPosition + new Vector2(1, -1);
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(-1, 1);
+                                    }
+                                    else if (playerPosition.Y > currentPosition.Y && playerPosition.X < currentPosition.X)
+                                    {
+                                        newPosition = currentPosition + new Vector2(-1, 1);
+                                        if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() && playerPosition != newPosition)
+                                            newPosition = currentPosition + new Vector2(1, -1);
+                                    }
+
+                                    if (newPosition == playerPosition) goto End;
+
+                                    if (!map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty())
+                                    {
+                                        int[] move = new int[] { -1, 1 };
+                                        newPosition = currentPosition + new Vector2(move[r.Next(0, move.Length)], move[r.Next(0, move.Length)]);
+                                    }
+
+                                    break;
+                                case Enemy.Species.Mimic:
+                                    enemy.ISActive = true;
+                                    break;
+                                case Enemy.Species.Skeleton:
+                                    if (playerPosition.Y < currentPosition.Y) { newPosition = currentPosition + -Vector2.UnitY; }
+                                    if (playerPosition.Y > currentPosition.Y) { newPosition = currentPosition + Vector2.UnitY; }
+                                    break;
+                                case Enemy.Species.Rat:
+                                case Enemy.Species.Bat:
+                                    if (playerPosition.Y < currentPosition.Y) { newPosition = currentPosition + -Vector2.UnitY; }
+                                    if (playerPosition.Y > currentPosition.Y) { newPosition = currentPosition + Vector2.UnitY; }
+                                    if (playerPosition.X < currentPosition.X) { newPosition = currentPosition + -Vector2.UnitX; }
+                                    if (playerPosition.X > currentPosition.X) { newPosition = currentPosition + Vector2.UnitX; }
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            if (map[(int)newPosition.X, (int)newPosition.Y].CheckIfEmpty() || newPosition == playerPosition) goto End;
                         }
 
+                        newPosition = currentPosition;
 
-                        if (playerPosition.Y > currentPosition.Y) { newPosition = currentPosition + Vector2.UnitY; }
-                        if (playerPosition.X > currentPosition.X) { newPosition = currentPosition + Vector2.UnitX; }
-                        if (playerPosition.Y < currentPosition.Y) { newPosition = currentPosition + -Vector2.UnitY; }
-
-                        if (playerPosition.X < currentPosition.X) { newPosition = currentPosition + -Vector2.UnitX; }
-
-
+                        End:;
                     } else {
                         while(true) {
 
@@ -394,6 +499,7 @@ namespace AdventureGame
                         Console.ReadKey(true);
 
                         FightSequence((Enemy)enemy, enemy);
+                        if (gameState == GameState.Dead) return;
 
                         gameState = GameState.InDungeon;
                     }
@@ -406,19 +512,10 @@ namespace AdventureGame
             while (true)
             {
                 Console.Clear();
-                DrawBattleMessageHistoryBox();
-                p.WriteStats();
+                DrawBattleScreen(enemy);
 
-                Console.SetCursorPosition(25, 3);
-                Console.Write($"{enemy.Name}: {enemy.Hp} HP     ");
-
-                Console.SetCursorPosition(25, 10);
-                enemy.Sprite();
-
-                if (advantage == p) AddBattleMessageHistory($"Fighting {enemy.Name}: HP: {enemy.Hp}", true);
-                else {
+                if(advantage == enemy || enemy.MySpecies == Enemy.Species.Mimic) {
                     AddBattleMessageHistory($"{enemy.Name} has first turn", true);
-                    AddBattleMessageHistory($"Fighting {enemy.Name}: HP: {enemy.Hp}", true);
                     EnemyBattleAction(EnemyBattleState.Attack, BattleOption.Attack, true, enemy);
                     p.WriteStats();
                 }
@@ -432,18 +529,25 @@ namespace AdventureGame
                 while (true)
                 {
 
-                    Console.SetCursorPosition(25, 3);
-                    Console.Write($"{enemy.Name}: {enemy.Hp} HP     ");
+                    DrawBattleScreen(enemy);
 
                     currentBattleOption = DrawBattleMenu(battleMenuPosition, currentBattleOption);
 
                     if (p.IsAlive()) {
                         Console.Clear();
-                        Console.Write("You lost!");
+                        Console.WriteLine("You lost!");
+                        if (levelTrack == 0)
+                        {
+                            Console.WriteLine("You died on the 1st floor");
+                            Console.Write("Tip: Use health potions to restore HP");
+                        } else {
+                            Console.Write($"You made it {levelTrack + 1} floors deep into the dungeon");
+                        }
 
-
+                        gameState = GameState.Dead;
+                        timer.Dispose();
                         Console.ReadKey(true);
-                        Environment.Exit(0);
+                        return;
                     }
                     if (enemy.IsAlive()) {
                         var enemyName = enemy.Name;
@@ -565,9 +669,7 @@ namespace AdventureGame
                 case BattleOption.Item:
                     PlayerInventory(GameState.InBattle);
                     gameState = GameState.InBattle;
-                    DrawBattleMessageHistoryBox();
-                    DrawBattleMessageHistory();
-                    p.WriteStats();
+                    DrawBattleScreen(enemy);
                     return;
                 default:
                     break;
@@ -661,31 +763,6 @@ namespace AdventureGame
             }
 
             return odds.Last().Item1;
-        }
-
-        private static BattleOption DrawBattleMenu(int battleMenuPosition, BattleOption currentBattleOption)
-        {
-            BattleOption[] arr = (BattleOption[])Enum.GetValues(currentBattleOption.GetType());
-
-            Console.SetCursorPosition(0, 1);
-
-            for (int i = 0; i < arr.Length; i++)
-            {
-                if (i == battleMenuPosition)
-                {
-                    Console.BackgroundColor = ConsoleColor.Gray;
-                    Console.ForegroundColor = ConsoleColor.Black;
-                }
-                else
-                {
-                    Console.ResetColor();
-                }
-
-                Console.WriteLine($"\r{arr[i]}");
-                Console.ResetColor();
-            }
-
-            return currentBattleOption;
         }
 
         static void PlayerInventory(GameState currentGameState) {
@@ -783,10 +860,17 @@ namespace AdventureGame
 
         static void AddGameObjects(PowerUp[] pu, PickUpItem[] pui) {
             var r = new Random();
+            var pPosition = new Vector2();
 
 
             // Add Player
-            map[2, 2].AddGameObject(p, 2, 2);
+            if(gameState == GameState.NewGame)
+                map[2, 2].AddGameObject(p, 2, 2);
+
+            if(gameState == GameState.Escaped) {
+                pPosition = new Vector2(0, r.Next(2, 10));
+                map[(int)pPosition.X, (int)pPosition.Y].AddGameObject(p, (int)pPosition.X, (int)pPosition.Y);
+            }
 
             // Random Y position for locked door
             var randomKeyPosition = r.Next(1, colUserInputSize - 4);
@@ -798,6 +882,11 @@ namespace AdventureGame
                         map[row, col].AddGameObject(new LockedDoor(), row, col);
                         continue;
                     }
+
+                    if(gameState == GameState.Escaped && row == (int)pPosition.X && col == (int)pPosition.Y) {
+                        continue;
+                    }
+
                     if (col == 0 || col == rowUserInputSize - 1 || row == 0 || row == colUserInputSize - 1) {
 
                         if((row == 0 && col == 0) || (row == rowUserInputSize - 1 && col == 0) /*|| (row == 0 && col == colUserInputSize - 1) || (row == rowUserInputSize - 1 && col == colUserInputSize - 1)*/) {
@@ -912,8 +1001,12 @@ namespace AdventureGame
             }
 
             PickUpItem[] itemList = new PickUpItem[] { 
-                new HealthPotion("Health Potion", r.Next(1, 2)), 
-                new PickUpItem("Junk", r.Next(1, 5)) 
+                new LesserHealthPotion("Lesser Health Potion", r.Next(3, 5)), 
+                new GreaterHealthPotion("Max Health Potion", r.Next(1, 3)),
+                new PickUpItem("Stick", r.Next(1, 5)),
+                new PickUpItem("Rock", r.Next(1, 5)),
+                new PickUpItem("Pebble", r.Next(1, 5)),
+                new PickUpItem("Junk", r.Next(1, 5))
             };
 
             // Add pickup items
@@ -923,8 +1016,8 @@ namespace AdventureGame
 
                 switch (pui[i].MyItemType)
                 {
-                    case PickUpItem.ItemType.HealthPotion:
-                        pui[i] = new HealthPotion(itemList[index]);
+                    case PickUpItem.ItemType.LesserHealthPotion:
+                        pui[i] = new LesserHealthPotion(itemList[index]);
                         break;
                     default:
                         break;
@@ -940,11 +1033,11 @@ namespace AdventureGame
             }
 
             Enemy[] enemyList = new Enemy[] {
-                new Spider(r.Next(4, 6), 10, 4, "Spider", EnemyBattleAIState.Brute),
-                new Mimic(r.Next(3, 6), 15, 7, "Mimic", EnemyBattleAIState.Defensive),
-                new Rat(1, 3, 0, "Rat", EnemyBattleAIState.Coward),
-                new Skeleton(r.Next(4, 5), 10, 5, "Skeleton", EnemyBattleAIState.Random),
-                new Bat(3, r.Next(6, 10), 5, "Bat", EnemyBattleAIState.Brute)
+                new Spider(r.Next(4, 6), 10, 4, "Spider", 5, EnemyBattleAIState.Brute),
+                new Mimic(r.Next(3, 6), 15, 7, "Mimic", 0, EnemyBattleAIState.Defensive),
+                new Rat(1, 3, 0, "Rat", 10, EnemyBattleAIState.Coward),
+                new Skeleton(r.Next(4, 5), 10, 5, "Skeleton", 5, EnemyBattleAIState.Random),
+                new Bat(3, r.Next(6, 10), 5, "Bat", 7, EnemyBattleAIState.Brute)
             };
 
             // Add enemies
@@ -988,7 +1081,7 @@ namespace AdventureGame
         }
 
         public static void TimerCallback(Object stateinfo) {
-            if(gameState == GameState.InDungeon) { 
+            if(gameState == GameState.InDungeon && gameState != GameState.Dead) { 
                 EnemyAction();
             }
         }
