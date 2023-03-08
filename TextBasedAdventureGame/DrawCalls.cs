@@ -94,7 +94,7 @@ namespace AdventureGame
             }
 
             Console.SetCursorPosition(0, 43);
-            Console.Write("V1.1");
+            Console.Write("V1.12");
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.Write(" (Debug build)");
             Console.ResetColor();

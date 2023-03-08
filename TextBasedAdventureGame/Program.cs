@@ -181,7 +181,7 @@ namespace AdventureGame
             {
                 CreateDungeonRooms();
                 var r = new Random();
-                e = new Enemy[r.Next(2, 4)];
+                e = new Enemy[r.Next(2*(int)MathF.Pow(maps.Length, 0.5f), 2*(int)MathF.Pow(maps.Length, 0.5f))];
                 PowerUp[] pu = new PowerUp[r.Next(0, 2)];
                 PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
 
@@ -209,8 +209,8 @@ namespace AdventureGame
 
                     if(MovePlayer(actionUserInput)) continue;
 
+                    // Update enemy movement and reset timer to avoid jank movement
                     EnemyAction();
-
                     timer = ResetEnemyTimer(timer);
                 }
             }
@@ -249,6 +249,7 @@ namespace AdventureGame
                     break;
                 case ConsoleKey.Z:
                 case ConsoleKey.F:
+                case ConsoleKey.Enter:
                     PickUpNewItem(pPosition);
                     break;
                 case ConsoleKey.F1:
@@ -394,6 +395,7 @@ namespace AdventureGame
 
         private static void EnemyAction()
         {
+            if(gameState == GameState.InDungeon)
             foreach (var enemy in e) {
                 if(enemy != null && !enemy.IsAlive()) { 
                     var currentPosition = enemy.GetGameObjectPosition();
@@ -556,7 +558,6 @@ namespace AdventureGame
 
         private static void FightSequence(Enemy enemy, GameObject advantage)
         {
-            gameState = GameState.InBattle;
             while (true)
             {
                 Console.Clear();
@@ -646,6 +647,7 @@ namespace AdventureGame
                             break;
                         case ConsoleKey.Z:
                         case ConsoleKey.F:
+                        case ConsoleKey.Enter:
                             BattleAction(currentBattleOption, enemy);
                             Console.SetCursorPosition(0, 1);
                             continue;
@@ -1125,7 +1127,7 @@ namespace AdventureGame
                 }
 
                 while (true) {
-                    var randomPosition = new Vector2(r.Next(1, rowUserInputSize - 1), r.Next(1, colUserInputSize - 1));
+                    var randomPosition = new Vector2(r.Next(4, rowUserInputSize - 1), r.Next(1, colUserInputSize - 1));
                     if (map[(int)randomPosition.X, (int)randomPosition.Y].CheckIfEmpty()) {
                         map[(int)randomPosition.X, (int)randomPosition.Y].AddGameObject(e[i], (int)randomPosition.X, (int)randomPosition.Y);
                         break;
@@ -1140,7 +1142,7 @@ namespace AdventureGame
         }
 
         public static void TimerCallback(Object stateinfo) {
-            if(gameState == GameState.InDungeon && gameState != GameState.Dead) { 
+            if(gameState == GameState.InDungeon) { 
                 EnemyAction();
             }
         }
