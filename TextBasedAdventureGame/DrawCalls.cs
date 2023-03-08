@@ -60,11 +60,25 @@ namespace AdventureGame
 
         public static void DrawMainMenu(int menuCursorPosition)
         {
-            Console.SetCursorPosition(0, 0);
-            Console.Write("Title here:");
+            Console.SetCursorPosition(22 - 17, 1);
+            Console.Write("  _____");
+            Console.SetCursorPosition(22 - 16, 2);
+            Console.Write("|  __ \\");
+            Console.SetCursorPosition(22 - 16, 3);
+            Console.Write("| |  | | ___  ___ _ __   ___ _ __");
+            Console.SetCursorPosition(22 - 16, 4);
+            Console.Write("| |  | |/ _ \\/ _ \\ '_ \\ / _ \\ '__|");
+            Console.SetCursorPosition(22 - 16, 5);
+            Console.Write("| |__| |  __/  __/ |_) |  __/ |");
+            Console.SetCursorPosition(22 - 16, 6);
+            Console.Write("|_____/ \\___|\\___| .__/ \\___|_|");
+            Console.SetCursorPosition(22 - 16, 7);
+            Console.Write("                 | |");
+            Console.SetCursorPosition(22 - 16, 8);
+            Console.Write("                 |_|");
             MenuButtonState[] arr = (MenuButtonState[])Enum.GetValues(MenuButtonState.Start.GetType());
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
                 if (i == menuCursorPosition) {
                     Console.BackgroundColor = ConsoleColor.Gray;
@@ -75,9 +89,15 @@ namespace AdventureGame
 
 
                 Console.SetCursorPosition(22 - (arr[i].ToString().Length / 2), 10 + i + i);
-                Console.WriteLine(arr[i].ToString());
+                Console.Write(arr[i].ToString());
                 Console.ResetColor();
             }
+
+            Console.SetCursorPosition(0, 43);
+            Console.Write("V1.1");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write(" (Debug build)");
+            Console.ResetColor();
         }
 
         public static void RedrawObject(Vector2 position, Vector2 newPosition)
@@ -161,13 +181,7 @@ namespace AdventureGame
                 }
             }
         }
-        
-        public static void DrawControls()
-        {
-            Console.Clear();
-            
-            Console.ReadKey(true);
-        }
+       
 
         public static void DrawCredits()
         {
@@ -211,16 +225,34 @@ namespace AdventureGame
             Console.SetCursorPosition(22 - 7, 11);
             Console.Write("D| - Locked exit");
 
-            Console.SetCursorPosition(22 - 7, 16);
+            Console.ReadKey(true);
+        }
+
+        public static void DrawControls() {
+            Console.Clear();
+
+            Console.SetCursorPosition(22 - 4, 2);
+            Console.Write("Controls");
+            Console.SetCursorPosition(22 - 14, 4);
+            Console.Write("Move - W A S D or Arrow Keys");
+            Console.SetCursorPosition(22 - 10, 5);
+            Console.Write("Interact - F Z Enter");
+            Console.SetCursorPosition(22 - 11, 6);
+            Console.Write("Inventory | Exit - X E");
+
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+
+            Console.SetCursorPosition(22 - 7, 9);
             Console.Write("Debug controls");
-            Console.SetCursorPosition(22 - 7, 17);
+            Console.SetCursorPosition(22 - 7, 11);
             Console.Write("F1 - Add 10exp");
-            Console.SetCursorPosition(22 - 6, 18);
+            Console.SetCursorPosition(22 - 6, 12);
             Console.Write("F2 - Add key");
-            Console.SetCursorPosition(22 - 7, 19);
-            Console.Write("F3 - Add potion");
-            Console.SetCursorPosition(22 - 8, 20);
+            Console.SetCursorPosition(22 - 11, 13);
+            Console.Write("F3 - Add health potion");
+            Console.SetCursorPosition(22 - 8, 14);
             Console.Write("F4 - Kill player");
+            Console.ResetColor();
 
             Console.ReadKey(true);
         }
@@ -245,25 +277,83 @@ namespace AdventureGame
             }
         }
 
-        public static void DrawLost(int floor) {
+        public static void DrawLost(int floor, Player p) {
             Console.Clear();
 
-            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 5);
-            Console.Write(" _  _                 ___              _ ");
-            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 6);
-            Console.Write("| || | ___   _  _    |   \\   _   ___  | |");
-            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 7);
-            Console.Write(" \\  / /   \\ | || |   | [] \\ | | / _/ /  |");
-            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 8);
-            Console.WriteLine("  ||  \\___/  \\__/    |____/ |_| \\__| \\__|");
+            Console.SetCursorPosition(22 - 12, 4);
+            switch (floor)
+            {
+                case 1:
+                    Console.Write("You died on the 1st floor");
+                    break;
+                case 2:
+                    Console.Write("You died on the 2nd floor");
+                    break;
+                case 3:
+                    Console.Write("You died on the 3rd floor");
+                    break;
+                default:
+                    Console.Write($"You died on the {floor}th floor");
+                    break;
+            }
 
-            if (floor == 1) {
-                Console.WriteLine("You died on the 1st floor");
-                Console.Write("Tip: Use health potions to restore HP");
+            Console.SetCursorPosition(22 - ((26 + floor.ToString().Length + (floor > bestFloor ? floor.ToString().Length : bestFloor.ToString().Length)) / 2) + 1, 6);
+            Console.Write($"Cleared floors: ");
+
+            ConsoleColor floorColour = floor > bestFloor ? ConsoleColor.DarkYellow : ConsoleColor.DarkGray;
+
+            if (floor > bestFloor) {
+                bestFloor = floor;
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
             }
-            else {
-                Console.Write($"You made it {floor} floors deep into the dungeon");
+
+            Console.Write($"{floor}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write($" (Best : ");
+            Console.ForegroundColor = floorColour;
+            Console.Write($"{bestFloor}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write(")");
+            Console.ResetColor();
+
+            Console.SetCursorPosition(22 - ((17 + p.Lvl.ToString().Length + (p.Lvl > bestLevel ? p.Lvl.ToString().Length : bestLevel.ToString().Length)) / 2), 7);
+            Console.Write("Level: ");
+
+            ConsoleColor levelColour = p.Lvl > bestLevel ? ConsoleColor.DarkYellow : ConsoleColor.DarkGray;
+
+            if (p.Lvl > bestLevel) {
+                bestLevel = p.Lvl;
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
             }
+
+            Console.Write($"{p.Lvl}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write($" (Best : ");
+            Console.ForegroundColor = levelColour;
+            Console.Write($"{bestLevel}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write(")");
+            Console.ResetColor();
+
+            Console.SetCursorPosition(22 - ((15 + p.TotalEXP.ToString().Length + (p.TotalEXP > bestEXP ? p.TotalEXP.ToString().Length : bestEXP.ToString().Length)) / 2), 8);
+            Console.Write("EXP: ");
+
+            ConsoleColor expColour = p.TotalEXP > bestEXP ? ConsoleColor.DarkYellow : ConsoleColor.DarkGray;
+
+            if (p.TotalEXP > bestEXP)
+            {
+                bestEXP = p.TotalEXP;
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+            }
+
+            Console.Write($"{p.TotalEXP}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write($" (Best : ");
+            Console.ForegroundColor = expColour;
+            Console.Write($"{bestEXP}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write(")");
+            Console.ResetColor();
         }
 
         public static void WriteControls() {

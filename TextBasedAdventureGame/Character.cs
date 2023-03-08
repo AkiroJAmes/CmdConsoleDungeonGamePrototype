@@ -57,6 +57,7 @@ namespace AdventureGame
     {
         protected int LVL;
         protected int EXP;
+        protected int TOTAL_EXP;
         List<GameObject> ITEMS = new List<GameObject>();
 
         public Player()
@@ -70,8 +71,11 @@ namespace AdventureGame
             this.HP = hp;
             this.DF = df;
             this.EXP = exp;
+            this.TOTAL_EXP = exp;
             this.LVL = lvl;
         }
+
+        public int TotalEXP { get { return TOTAL_EXP; } }
 
         public override int MaxHP
         {
@@ -156,6 +160,7 @@ namespace AdventureGame
 
         public void AddEXP(int exp) {
             EXP += exp;
+            TOTAL_EXP += exp;
             GetEXP();
         }
 

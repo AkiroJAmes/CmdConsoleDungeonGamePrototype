@@ -25,6 +25,10 @@ namespace AdventureGame
 
         static int levelTrack;
 
+        public static int bestFloor = 1;
+        public static int bestLevel = 1;
+        public static int bestEXP = 0;
+
         static Timer timer;
         public static string[] dungeonMessages;
         public static string[] battleMessages;
@@ -45,6 +49,7 @@ namespace AdventureGame
         {
             Start,
             Legends,
+            Controls,
             Credits,
             Exit
         }
@@ -97,13 +102,13 @@ namespace AdventureGame
                     case ConsoleKey.W:
                         menuCursorPosition--;
                         currenMenuOption = Previous(currenMenuOption);
-                        if (menuCursorPosition < 0) menuCursorPosition = 3;
+                        if (menuCursorPosition < 0) menuCursorPosition = 4;
                         break;
                     case ConsoleKey.DownArrow:
                     case ConsoleKey.S:
                         menuCursorPosition++;
                         currenMenuOption = Next(currenMenuOption);
-                        if (menuCursorPosition > 3) menuCursorPosition = 0;
+                        if (menuCursorPosition > 4) menuCursorPosition = 0;
                         break;
                     case ConsoleKey.Z:
                     case ConsoleKey.F:
@@ -131,6 +136,9 @@ namespace AdventureGame
                     break;
                 case MenuButtonState.Legends:
                     DrawLegend();
+                    break;
+                case MenuButtonState.Controls:
+                    DrawControls();
                     break;
                 case MenuButtonState.Credits:
                     DrawCredits();
@@ -258,7 +266,7 @@ namespace AdventureGame
                     break;
                 case ConsoleKey.F4:
                     AddMessageHistory($"Debug testing: Killing player", true);
-                    PlayerDead();
+                    PlayerDead(true);
                     return true;
             }
 
@@ -548,6 +556,7 @@ namespace AdventureGame
 
         private static void FightSequence(Enemy enemy, GameObject advantage)
         {
+            gameState = GameState.InBattle;
             while (true)
             {
                 Console.Clear();
@@ -557,6 +566,11 @@ namespace AdventureGame
                     AddBattleMessageHistory($"{enemy.Name} has first turn", true);
                     EnemyBattleAction(EnemyBattleState.Attack, BattleOption.Attack, true, enemy);
                     p.WriteStats(21);
+
+                    if (p.IsAlive()) {
+                        PlayerDead(false);
+                        return;
+                    }
                 }
 
                 var input = Console.ReadKey(true).Key;
@@ -573,7 +587,7 @@ namespace AdventureGame
                     currentBattleOption = DrawBattleMenu(battleMenuPosition, currentBattleOption);
 
                     if (p.IsAlive()) {
-                        PlayerDead();
+                        PlayerDead(true);
                         return;
                     }
                     if (enemy.IsAlive()) {
@@ -843,11 +857,13 @@ namespace AdventureGame
             Console.Clear();
         }
 
-        private static void PlayerDead()
+        private static void PlayerDead(bool dispose)
         {
-            timer.Dispose();
+            if(dispose)
+                timer.Dispose();
+
             Console.ReadKey(true);
-            DrawLost(levelTrack + 1);
+            DrawLost(levelTrack + 1, p);
             gameState = GameState.Dead;
             Console.ReadKey(true);
         }
