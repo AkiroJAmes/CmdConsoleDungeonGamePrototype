@@ -184,6 +184,18 @@ namespace AdventureGame
             MyItemType = copy.MyItemType;
         }
 
+        public override bool UseItem(Player player, PickUpItem item, Program.GameState gameState)
+        {
+            this.Qty--;
+
+            if(Qty <= 0) {
+                player.RemoveItem(item);
+                Qty = 1;
+            }
+
+            return true;
+        }
+
         public override void Draw()
         {
             Console.ForegroundColor = ConsoleColor.White;

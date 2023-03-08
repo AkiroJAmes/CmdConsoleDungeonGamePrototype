@@ -43,7 +43,7 @@ namespace AdventureGame
             return currentBattleOption;
         }
 
-        // Prevent draw call overlap with lock
+        // Prevent draw call overlap
         private static readonly object myLock = new object();
 
         public static void DrawMainDungeonScreen(Room[,] map, int colUserInputSize, int rowUserInputSize)
@@ -51,43 +51,11 @@ namespace AdventureGame
             lock (myLock) {
                 Console.SetCursorPosition(0, 0);
                 DrawDungeon(map, colUserInputSize, rowUserInputSize);
-                p.WriteStats();
-                DrawBox(5, 40, 2, 25);
+                p.WriteStats(23);
+                DrawBox(5, 41, 2, 26);
                 DrawMessageHistory();
                 WriteControls();
             }
-/*            // Buffer draw calls made to ensure no draws are overlapped
-
-            if (!currentlyDrawing) {
-                currentlyDrawing = true;
-
-
-
-                // Very very small wait to ensure write has time to finish to avoid artifacts
-                Thread.Sleep(1);
-
-                currentlyDrawing = false;
-                return;
-            }
-
-            if (currentlyDrawing)
-            {
-                while (true) {
-                    if (!currentlyDrawing) break;
-                }
-
-                currentlyDrawing = true;
-
-                Console.SetCursorPosition(0, 0);
-                DrawDungeon();
-                p.WriteStats();
-                WriteControls();
-
-                Thread.Sleep(1);
-
-                currentlyDrawing = false;
-                return;
-            }*/
         }
 
         public static void DrawMainMenu(int menuCursorPosition)
@@ -125,7 +93,7 @@ namespace AdventureGame
         {
             DrawBox(5, 40, 2, 25);
             DrawBattleMessageHistory();
-            p.WriteStats();
+            p.WriteStats(21);
 
             DrawBox(18, 42, 1, 1);
 
@@ -137,6 +105,16 @@ namespace AdventureGame
 
             Console.SetCursorPosition(5, 12);
             p.Sprite();
+        }
+
+        public static void UpdateEnemyDrawHP(Enemy enemy)
+        {
+            Console.SetCursorPosition(24, 9);
+
+            int hp = enemy.Hp;
+            if (hp < 0) hp = 0;
+
+            Console.Write($"{enemy.Name}: {hp} HP   ");
         }
 
         public static void DrawBox(int height, int width, int left, int top) {
@@ -163,9 +141,9 @@ namespace AdventureGame
             {
 
                 if (dungeonMessages[i] != null) {
-                    Console.SetCursorPosition(4, 26 + i);
+                    Console.SetCursorPosition(4, 27 + i);
                     Console.Write("                                     ");
-                    Console.SetCursorPosition(4, 26 + i);
+                    Console.SetCursorPosition(4, 27 + i);
                     Console.Write(dungeonMessages[i]);
                 }
             }
@@ -202,27 +180,47 @@ namespace AdventureGame
         public static void DrawLegend()
         {
             Console.Clear();
-            Console.Write("Game legend here\n");
+            Console.SetCursorPosition(22 - 5, 2);
+            Console.Write("Game legend");
 
+            Console.SetCursorPosition(22 - 5, 4);
             Console.BackgroundColor = ConsoleColor.Green;
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write("  ");
             Console.ResetColor();
 
-            Console.WriteLine(" - Player");
+            Console.Write(" - Player");
 
-            Console.WriteLine("oD - Spider");
-            Console.WriteLine("o/ - Rat");
-            Console.WriteLine("[] - Mimic");
-            Console.WriteLine("{8 - Skeleton");
-            Console.WriteLine(@"\/ - Bat");
+            Console.SetCursorPosition(22 - 5, 5);
+            Console.Write("oD - Spider");
+            Console.SetCursorPosition(22 - 4, 6);
+            Console.Write("o/ - Rat");
+            Console.SetCursorPosition(22 - 5, 7);
+            Console.Write("[] - Mimic");
+            Console.SetCursorPosition(22 - 6, 8);
+            Console.Write("{8 - Skeleton");
+            Console.SetCursorPosition(22 - 4, 9);
+            Console.Write(@"\/ - Bat");
 
+            Console.SetCursorPosition(22 - 7, 10);
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.Write("? ");
             Console.ResetColor();
-            Console.WriteLine("- Random Item");
+            Console.Write(" - Random Item");
 
-            Console.WriteLine("D| - Locked exit");
+            Console.SetCursorPosition(22 - 7, 11);
+            Console.Write("D| - Locked exit");
+
+            Console.SetCursorPosition(22 - 7, 16);
+            Console.Write("Debug controls");
+            Console.SetCursorPosition(22 - 7, 17);
+            Console.Write("F1 - Add 10exp");
+            Console.SetCursorPosition(22 - 6, 18);
+            Console.Write("F2 - Add key");
+            Console.SetCursorPosition(22 - 7, 19);
+            Console.Write("F3 - Add potion");
+            Console.SetCursorPosition(22 - 8, 20);
+            Console.Write("F4 - Kill player");
 
             Console.ReadKey(true);
         }
@@ -247,12 +245,33 @@ namespace AdventureGame
             }
         }
 
+        public static void DrawLost(int floor) {
+            Console.Clear();
+
+            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 5);
+            Console.Write(" _  _                 ___              _ ");
+            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 6);
+            Console.Write("| || | ___   _  _    |   \\   _   ___  | |");
+            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 7);
+            Console.Write(" \\  / /   \\ | || |   | [] \\ | | / _/ /  |");
+            Console.SetCursorPosition((Console.WindowWidth / 2) - 20, 8);
+            Console.WriteLine("  ||  \\___/  \\__/    |____/ |_| \\__| \\__|");
+
+            if (floor == 1) {
+                Console.WriteLine("You died on the 1st floor");
+                Console.Write("Tip: Use health potions to restore HP");
+            }
+            else {
+                Console.Write($"You made it {floor} floors deep into the dungeon");
+            }
+        }
+
         public static void WriteControls() {
-            Console.SetCursorPosition(10, 31);
+            Console.SetCursorPosition(10, 32);
             Console.BackgroundColor = ConsoleColor.White;
             Console.ForegroundColor = ConsoleColor.Black;
             Console.Write("   W    E < inventory   ");
-            Console.SetCursorPosition(10, 32);
+            Console.SetCursorPosition(10, 33);
             Console.Write(" A S D    F < interact  ");
             Console.ResetColor();
         }

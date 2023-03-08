@@ -30,7 +30,7 @@ namespace AdventureGame
             }
         }
 
-        public int MaxHP { 
+        public virtual int MaxHP { 
             get {
                 return MAXHP;
             }
@@ -38,7 +38,7 @@ namespace AdventureGame
 
         public override string Name { get { return NAME; } }
 
-        public int At
+        public virtual int At
         {
             get
             {
@@ -46,7 +46,7 @@ namespace AdventureGame
             }
         }
 
-        public int Df { get
+        public virtual int Df { get
             {
                 return DF;
             }
@@ -72,6 +72,37 @@ namespace AdventureGame
             this.EXP = exp;
             this.LVL = lvl;
         }
+
+        public override int MaxHP
+        {
+            get
+            {
+                return CalcStat(MAXHP);
+            }
+        }
+
+        public override int At
+        {
+            get
+            {
+                return CalcStat(AT);
+            }
+        }
+
+        public override int Df
+        {
+            get
+            {
+                return CalcStat(DF);
+            }
+        }
+
+        int CalcStat(float stat) {
+            float exponent = 0.5f;
+
+            return (int)(stat * MathF.Pow(Lvl, exponent));
+        }
+
 
         public override void Draw() {
             Console.ForegroundColor = ConsoleColor.Black;
@@ -102,16 +133,25 @@ namespace AdventureGame
             LVL++;
         }
 
-        public void WriteStats() {
+        public void WriteStats(int height) {
 
             GetEXP();
 
+            string level = $"Level: {Lvl} | EXP: {GetEXP()} / {NextLevel()}";
+            int levelPos = 22 - (level.Length / 2);
+            string stats = $"HP {Hp} / {MaxHP} : AT {At} : DF {Df}";
+            int statPos = 22 - (stats.Length / 2);
+
+
             // Make sure the line is clear
-            Console.SetCursorPosition(2, 23);
+            Console.SetCursorPosition(0, height);
             Console.Write("\r                                            ");
-            Console.SetCursorPosition(2, 23);
-            Console.Write($"Level: {Lvl} | EXP: {GetEXP()} / {NextLevel()} | ");
-            Console.Write($"HP{HP} : AT{AT} : DF{DF}");
+            Console.SetCursorPosition(0, height + 1);
+            Console.Write("\r                                            ");
+            Console.SetCursorPosition(levelPos, height);
+            Console.Write(level);
+            Console.SetCursorPosition(statPos, height + 1);
+            Console.Write(stats);
         }
 
         public void AddEXP(int exp) {

@@ -9,13 +9,14 @@ using System.Security;
 using System.Threading;
 
 using static AdventureGame.DrawCalls;
+using static AdventureGame.Utility;
 
 namespace AdventureGame
 {
     internal class Program
     {
-        static int rowUserInputSize = 22;
-        static int colUserInputSize = 22;
+        public static int rowUserInputSize = 22;
+        public static int colUserInputSize = 22;
 
         public static Room[,] map;
         static object[] maps = new object[0];
@@ -80,25 +81,28 @@ namespace AdventureGame
             MenuButtonState currenMenuOption = MenuButtonState.Start;
 
             while (true) {
+                // Reset game
                 dungeonMessages = new string[] { "Explore the dungeon...", null, null };
                 battleMessages = new string[] { null, null, null };
                 gameState = GameState.NewGame;
                 levelTrack = -1;
+
                 DrawMainMenu(menuCursorPosition);
                 var key = Console.ReadKey(true).Key;
 
+                // Menu scrolling
                 switch (key)
                 {
                     case ConsoleKey.UpArrow:
                     case ConsoleKey.W:
                         menuCursorPosition--;
-                        currenMenuOption = Utility.Previous(currenMenuOption);
+                        currenMenuOption = Previous(currenMenuOption);
                         if (menuCursorPosition < 0) menuCursorPosition = 3;
                         break;
                     case ConsoleKey.DownArrow:
                     case ConsoleKey.S:
                         menuCursorPosition++;
-                        currenMenuOption = Utility.Next(currenMenuOption);
+                        currenMenuOption = Next(currenMenuOption);
                         if (menuCursorPosition > 3) menuCursorPosition = 0;
                         break;
                     case ConsoleKey.Z:
@@ -119,47 +123,10 @@ namespace AdventureGame
             switch (currenMenuOption)
             {
                 case MenuButtonState.Start:
-                    do {
-                        if (gameState == GameState.Escaped || gameState == GameState.NewGame) {
-                            levelTrack++;
-                            var mapsRef = maps;
-                            maps = new object[maps.Length + 1];
+                     CreateNewMap();
+                     GameLoop();
 
-                            for (int i = 0; i < mapsRef.Length; i++) {
-                                maps[i] = mapsRef[i];
-                            }
-
-                            map = new Room[rowUserInputSize, colUserInputSize];
-
-                            maps[maps.Length - 1] = map;
-                        }
-
-                        map = (Room[,])maps[levelTrack];
-
-                        if(gameState == GameState.NewGame)
-                            p = new Player(5, 10, 5, 0, 1);
-
-                        Console.Clear();
-
-                        if(gameState == GameState.NewGame || gameState == GameState.Escaped) {
-                            CreateDungeonRooms();
-                            var r = new Random();
-                            e = new Enemy[r.Next(2, 4)];
-                            PowerUp[] pu = new PowerUp[r.Next(0, 2)];
-                            PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
-
-                            AddGameObjects(pu, pui);
-
-                            InitTimer();
-                        }
-
-                        gameState = GameState.InDungeon;
-
-                        GameLoop();
-
-                        Console.Clear();
-
-                    } while (gameState == GameState.Escaped);
+                     Console.Clear();
 
                     break;
                 case MenuButtonState.Legends:
@@ -178,17 +145,52 @@ namespace AdventureGame
             Console.Clear();
         }
 
+        private static void CreateNewMap()
+        {
+            if (gameState == GameState.Escaped || gameState == GameState.NewGame) {
+                levelTrack++;
+                var mapsRef = maps;
+                maps = new object[maps.Length + 1];
+
+                for (int i = 0; i < mapsRef.Length; i++)
+                {
+                    maps[i] = mapsRef[i];
+                }
+
+                map = new Room[rowUserInputSize, colUserInputSize];
+
+                maps[maps.Length - 1] = map;
+            }
+
+            map = (Room[,])maps[levelTrack];
+
+            if (gameState == GameState.NewGame)
+                p = new Player(5, 10, 3, 0, 1);
+
+            Console.Clear();
+
+            if (gameState == GameState.NewGame || gameState == GameState.Escaped)
+            {
+                CreateDungeonRooms();
+                var r = new Random();
+                e = new Enemy[r.Next(2, 4)];
+                PowerUp[] pu = new PowerUp[r.Next(0, 2)];
+                PickUpItem[] pui = new PickUpItem[r.Next(4, 7)];
+
+                AddGameObjects(pu, pui);
+
+                InitTimer();
+            }
+
+            gameState = GameState.InDungeon;
+        }
+
         static void GameLoop()
         {
-            Vector2 newPlayerPosition = Vector2.Zero;
-            Vector2 playerPositionLastTurn = Vector2.Zero;
-
             DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
 
             while (gameState != GameState.Dead) {
                 if(gameState == GameState.InDungeon) { 
-                    var pPosition = p.GetGameObjectPosition();
-
                     ConsoleKey actionUserInput = ConsoleKey.F24;
 
                     if(Console.KeyAvailable) {
@@ -197,104 +199,135 @@ namespace AdventureGame
                         continue;
                     }
 
-                    switch (actionUserInput)
-                    {
-                        case ConsoleKey.UpArrow:
-                        case ConsoleKey.W:
-                            newPlayerPosition = new Vector2(pPosition.X, pPosition.Y - 1);
-                            break;
-                        case ConsoleKey.DownArrow:
-                        case ConsoleKey.S:
-                            newPlayerPosition = new Vector2(pPosition.X, pPosition.Y + 1);
-                            break;
-                        case ConsoleKey.RightArrow:
-                        case ConsoleKey.D:
-                            newPlayerPosition = new Vector2(pPosition.X + 1, pPosition.Y);
-                            break;
-                        case ConsoleKey.LeftArrow:
-                        case ConsoleKey.A:
-                            newPlayerPosition = new Vector2(pPosition.X - 1, pPosition.Y);
-                            break;
-                        case ConsoleKey.X:
-                        case ConsoleKey.E:
-                            PlayerInventory(GameState.InDungeon);
-                            gameState = GameState.InDungeon;
-                            DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
-                            break;
-                        case ConsoleKey.Z:
-                        case ConsoleKey.F:
-                            PickUpNewItem(pPosition);
-                            break;
-                        case ConsoleKey.P:
-                            p.AddEXP(10);
-                            p.WriteStats();
-      
-
-                            break;
-                    }
-
-
-                    if (newPlayerPosition.X == rowUserInputSize) {
-                        gameState = GameState.Escaped;
-                        map[(int)pPosition.X, (int)pPosition.Y].RemoveGameObject(p);
-                        timer.Dispose();
-                        return;
-                    }
-
-                    if(newPlayerPosition.X == - 1) {
-                        AddMessageHistory("The way back is blocked", true);
-                        continue;
-                    }
-
-                    // Check if new player position is valid
-                    Room mapPosition = map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y];
-
-                    if (!mapPosition.CheckIfEmpty() && mapPosition.CheckIfWall()) {
-                        continue;
-                    }
-
-                    switch (actionUserInput) {
-                        case ConsoleKey.UpArrow:
-                        case ConsoleKey.W:
-                        case ConsoleKey.DownArrow:
-                        case ConsoleKey.S:
-                        case ConsoleKey.RightArrow:
-                        case ConsoleKey.D:
-                        case ConsoleKey.LeftArrow:
-                        case ConsoleKey.A:
-                            map[(int)pPosition.X, (int)pPosition.Y].RemoveGameObject(p);
-                            map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y].AddGameObject(p, (int)newPlayerPosition.X, (int)newPlayerPosition.Y);
-                            break;
-                    }
-
-                    if (!mapPosition.CheckIfEmpty() && gameState != GameState.InBattle) {
-                        Enemy e = (Enemy)mapPosition.CheckIfEnemy();
-                        if (e != null) {
-                            RedrawObject(pPosition, newPlayerPosition);
-                            gameState = GameState.InBattle;
-                            if(e.MySpecies == Enemy.Species.Mimic) {
-                                AddMessageHistory($"{e.Name} attcked you!", true);
-                            } else 
-                                AddMessageHistory($"You attacked {e.Name}!", true);
-
-                            Console.ReadKey(true);
-
-                            FightSequence(e, p);
-                            if (gameState == GameState.Dead) return;
-
-                            gameState = GameState.InDungeon;
-                        }
-                    }
-
-                    RedrawObject(pPosition, newPlayerPosition);
+                    if(MovePlayer(actionUserInput)) continue;
 
                     EnemyAction();
 
-                    timer = Utility.ResetEnemyTimer(timer);
-
-                    RedrawObject(pPosition, newPlayerPosition);
+                    timer = ResetEnemyTimer(timer);
                 }
             }
+
+            if (gameState == GameState.Dead) timer.Dispose();
+        }
+
+        private static bool MovePlayer(ConsoleKey actionUserInput)
+        {
+            Vector2 newPlayerPosition = Vector2.Zero;
+            var pPosition = p.GetGameObjectPosition();
+
+            switch (actionUserInput)
+            {
+                case ConsoleKey.UpArrow:
+                case ConsoleKey.W:
+                    newPlayerPosition = new Vector2(pPosition.X, pPosition.Y - 1);
+                    break;
+                case ConsoleKey.DownArrow:
+                case ConsoleKey.S:
+                    newPlayerPosition = new Vector2(pPosition.X, pPosition.Y + 1);
+                    break;
+                case ConsoleKey.RightArrow:
+                case ConsoleKey.D:
+                    newPlayerPosition = new Vector2(pPosition.X + 1, pPosition.Y);
+                    break;
+                case ConsoleKey.LeftArrow:
+                case ConsoleKey.A:
+                    newPlayerPosition = new Vector2(pPosition.X - 1, pPosition.Y);
+                    break;
+                case ConsoleKey.X:
+                case ConsoleKey.E:
+                    PlayerInventory(GameState.InDungeon);
+                    gameState = GameState.InDungeon;
+                    DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
+                    break;
+                case ConsoleKey.Z:
+                case ConsoleKey.F:
+                    PickUpNewItem(pPosition);
+                    break;
+                case ConsoleKey.F1:
+                    p.AddEXP(10);
+                    AddMessageHistory($"Debug testing: Added 10 exp", true);
+                    p.WriteStats(23);
+                    break;
+                case ConsoleKey.F2:
+                    p.AddItem(new Key("Debug Key", 1));
+                    AddMessageHistory($"Debug testing: Added key", true);
+                    break;
+                case ConsoleKey.F3:
+                    p.AddItem(new GreaterHealthPotion("Debug Potion", 1));
+                    AddMessageHistory($"Debug testing: Added potion", true);
+                    break;
+                case ConsoleKey.F4:
+                    AddMessageHistory($"Debug testing: Killing player", true);
+                    PlayerDead();
+                    return true;
+            }
+
+
+            if (newPlayerPosition.X == rowUserInputSize)
+            {
+                gameState = GameState.Escaped;
+                map[(int)pPosition.X, (int)pPosition.Y].RemoveGameObject(p);
+                timer.Dispose();
+                CreateNewMap();
+                DrawMainDungeonScreen(map, colUserInputSize, rowUserInputSize);
+                return false;
+            }
+
+            if (newPlayerPosition.X == -1)
+            {
+                AddMessageHistory("The way back is blocked", true);
+                return true;
+            }
+
+            // Check if new player position is valid
+            Room mapPosition = map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y];
+
+            if (!mapPosition.CheckIfEmpty() && mapPosition.CheckIfWall())
+            {
+                return true;
+            }
+
+            switch (actionUserInput)
+            {
+                case ConsoleKey.UpArrow:
+                case ConsoleKey.W:
+                case ConsoleKey.DownArrow:
+                case ConsoleKey.S:
+                case ConsoleKey.RightArrow:
+                case ConsoleKey.D:
+                case ConsoleKey.LeftArrow:
+                case ConsoleKey.A:
+                    map[(int)pPosition.X, (int)pPosition.Y].RemoveGameObject(p);
+                    map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y].AddGameObject(p, (int)newPlayerPosition.X, (int)newPlayerPosition.Y);
+                    break;
+            }
+
+            if (!mapPosition.CheckIfEmpty() && gameState != GameState.InBattle)
+            {
+                Enemy e = (Enemy)mapPosition.CheckIfEnemy();
+                if (e != null)
+                {
+                    RedrawObject(pPosition, newPlayerPosition);
+                    gameState = GameState.InBattle;
+                    if (e.MySpecies == Enemy.Species.Mimic)
+                    {
+                        AddMessageHistory($"{e.Name} attcked you!", true);
+                    }
+                    else
+                        AddMessageHistory($"You attacked {e.Name}!", true);
+
+                    Console.ReadKey(true);
+
+                    FightSequence(e, p);
+                    if (gameState == GameState.Dead) return true;
+
+                    gameState = GameState.InDungeon;
+                }
+            }
+
+            RedrawObject(pPosition, newPlayerPosition);
+
+            return false;
         }
 
         public static void AddMessageHistory(string newMessage, bool redraw) {
@@ -472,7 +505,7 @@ namespace AdventureGame
                                     newPosition = currentPosition + new Vector2(0, r.Next(-1, 2));
                                     break;
                                 case Enemy.Species.Bat: // Chance to idle
-                                    if(r.Next(0, 2) == 0) {
+                                    if(r.Next(0, 5) <= 3) {
                                         if (r.Next(0, 2) == 0) newPosition = currentPosition + new Vector2(0, r.Next(-1, 2));
                                         else newPosition = currentPosition + new Vector2(r.Next(-1, 2), 0);
                                     } else newPosition = currentPosition;
@@ -523,7 +556,7 @@ namespace AdventureGame
                 if(advantage == enemy || enemy.MySpecies == Enemy.Species.Mimic) {
                     AddBattleMessageHistory($"{enemy.Name} has first turn", true);
                     EnemyBattleAction(EnemyBattleState.Attack, BattleOption.Attack, true, enemy);
-                    p.WriteStats();
+                    p.WriteStats(21);
                 }
 
                 var input = Console.ReadKey(true).Key;
@@ -540,19 +573,7 @@ namespace AdventureGame
                     currentBattleOption = DrawBattleMenu(battleMenuPosition, currentBattleOption);
 
                     if (p.IsAlive()) {
-                        Console.Clear();
-                        Console.WriteLine("You lost!");
-                        if (levelTrack == 0)
-                        {
-                            Console.WriteLine("You died on the 1st floor");
-                            Console.Write("Tip: Use health potions to restore HP");
-                        } else {
-                            Console.Write($"You made it {levelTrack + 1} floors deep into the dungeon");
-                        }
-
-                        gameState = GameState.Dead;
-                        timer.Dispose();
-                        Console.ReadKey(true);
+                        PlayerDead();
                         return;
                     }
                     if (enemy.IsAlive()) {
@@ -600,13 +621,13 @@ namespace AdventureGame
                         case ConsoleKey.UpArrow:
                         case ConsoleKey.W:
                             battleMenuPosition--;
-                            currentBattleOption = Utility.Previous(currentBattleOption);
+                            currentBattleOption = Previous(currentBattleOption);
                             if (battleMenuPosition < 0) battleMenuPosition = maxBattleOptions;
                             break;
                         case ConsoleKey.DownArrow:
                         case ConsoleKey.S:
                             battleMenuPosition++;
-                            currentBattleOption = Utility.Next(currentBattleOption);
+                            currentBattleOption = Next(currentBattleOption);
                             if (battleMenuPosition > maxBattleOptions) battleMenuPosition = 0;
                             break;
                         case ConsoleKey.Z:
@@ -651,9 +672,10 @@ namespace AdventureGame
                     if (atDmg < 1) atDmg = 1;
 
 
-                    AddBattleMessageHistory($"Attacking the enemy, -{atDmg}", true);
+                    AddBattleMessageHistory($"Dealt {atDmg}dmg to the {enemy.Name}", true);
 
                     enemy.Hp -= atDmg;
+                    UpdateEnemyDrawHP(enemy);
 
                     if (enemy.Hp <= 0) {
                         var mapPosition = p.GetGameObjectPosition();
@@ -688,7 +710,7 @@ namespace AdventureGame
             Thread.Sleep(500);
 
             EnemyBattleAction(enemyAction, currentBattleOption, false, enemy);
-            p.WriteStats();
+            p.WriteStats(21);
         }
 
         private static void EnemyBattleAction(EnemyBattleState currentEnemyBattleAction, BattleOption currentBattleOption, bool firstTurn, Enemy enemy)
@@ -710,7 +732,7 @@ namespace AdventureGame
 
                     p.Hp -= atDmg;
 
-                    AddBattleMessageHistory($"{enemy.Name} did {atDmg}dmg!", true);
+                    AddBattleMessageHistory($"The {enemy.Name} did {atDmg}dmg!", true);
 
                     break;
                 case EnemyBattleState.Run:
@@ -724,13 +746,13 @@ namespace AdventureGame
         private static EnemyBattleState EnemyBattleAction(EnemyBattleAIState ai)
         {
             // Base odds
-            (EnemyBattleState, double)[] odds = new[] { (EnemyBattleState.Attack, 3), (EnemyBattleState.Defend, 0.5), (EnemyBattleState.Run, 0.0) };
+            (EnemyBattleState, double)[] odds = new[] { (EnemyBattleState.Attack, 4.0), (EnemyBattleState.Defend, 1.0), (EnemyBattleState.Run, 0.0) };
 
             switch (ai)
             {
                 case EnemyBattleAIState.Defensive:
                     odds = new[] {
-                        (EnemyBattleState.Attack, 1.0),
+                        (EnemyBattleState.Attack, 2.0),
                         (EnemyBattleState.Defend, 3.0),
                         (EnemyBattleState.Run, 0.0)
                     };
@@ -744,7 +766,7 @@ namespace AdventureGame
                     break;
                 case EnemyBattleAIState.Random:
                     odds = new[] {
-                        (EnemyBattleState.Attack, 1.0),
+                        (EnemyBattleState.Attack, 2.0),
                         (EnemyBattleState.Defend, 1.0),
                         (EnemyBattleState.Run, 0.0)
                     };
@@ -821,6 +843,15 @@ namespace AdventureGame
             Console.Clear();
         }
 
+        private static void PlayerDead()
+        {
+            timer.Dispose();
+            Console.ReadKey(true);
+            DrawLost(levelTrack + 1);
+            gameState = GameState.Dead;
+            Console.ReadKey(true);
+        }
+
         static void PickUpNewItem(Vector2 pPosition)
         {
             var mapPosition = map[(int)pPosition.X, (int)pPosition.Y];
@@ -838,10 +869,16 @@ namespace AdventureGame
 
                 foreach (var i in items)
                 {
-                    if (i.Name == "Strange Key") {
-                        map[(int)pPosition.X + 1, (int)pPosition.Y].RemoveGameObject(map[(int)pPosition.X + 1, (int)pPosition.Y].GetGameObjects()[0]);
-                        map[(int)pPosition.X + 1, (int)pPosition.Y].Draw();
-                        p.RemoveItem(i);
+                    if (i.Name.Contains("Key")) {
+                        AddMessageHistory($"Door unlocked with {i.Name}", true);
+                        int posX = (int)pPosition.X + 1;
+                        int posY = (int)pPosition.Y;
+
+
+                        map[posX, posY].RemoveGameObject(map[posX, posY].GetGameObjects()[0]);
+                        RedrawObject(new Vector2(posX, posY), new Vector2(posX, posY));
+
+                        i.UseItem(p, (PickUpItem)i, gameState);
                         return;
                     }
                 }
