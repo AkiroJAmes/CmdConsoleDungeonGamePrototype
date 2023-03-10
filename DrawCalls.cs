@@ -21,6 +21,8 @@ namespace AdventureGame
 
         public static BattleOption DrawBattleMenu(int battleMenuPosition, BattleOption currentBattleOption)
         {
+            // Drawing hightlighed selection 
+
             BattleOption[] arr = (BattleOption[])Enum.GetValues(currentBattleOption.GetType());
 
             for (int i = 0; i < arr.Length; i++)
@@ -76,7 +78,10 @@ namespace AdventureGame
             Console.Write("                 | |");
             Console.SetCursorPosition(22 - 16, 8);
             Console.Write("                 |_|");
+
             MenuButtonState[] arr = (MenuButtonState[])Enum.GetValues(MenuButtonState.Start.GetType());
+
+            // Hightlighting selected option
 
             for (int i = 0; i < 5; i++)
             {
@@ -102,6 +107,7 @@ namespace AdventureGame
 
         public static void RedrawObject(Vector2 position, Vector2 newPosition)
         {
+            // Redraw at position
             Console.SetCursorPosition((int)position.X * 2, (int)position.Y);
             map[(int)position.X, (int)position.Y].Draw();
 
@@ -238,7 +244,7 @@ namespace AdventureGame
             Console.SetCursorPosition(22 - 10, 5);
             Console.Write("Interact - F Z Enter");
             Console.SetCursorPosition(22 - 11, 6);
-            Console.Write("Inventory | Exit - X E");
+            Console.Write("Inventory | Exit - E X");
 
             Console.ForegroundColor = ConsoleColor.DarkGray;
 
@@ -296,6 +302,8 @@ namespace AdventureGame
                     Console.Write($"You died on the {floor}th floor");
                     break;
             }
+
+            // Checks for new milestones and highlights them
 
             Console.SetCursorPosition(22 - ((26 + floor.ToString().Length + (floor > bestFloor ? floor.ToString().Length : bestFloor.ToString().Length)) / 2) + 1, 6);
             Console.Write($"Cleared floors: ");

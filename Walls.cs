@@ -24,6 +24,8 @@ namespace AdventureGame
     {
         public override void Draw()
         {
+            // Random wall variation
+
             switch (new Random().Next(0, 6))
             {
                 case 0:
@@ -89,6 +91,8 @@ namespace AdventureGame
     {
         public override void Draw()
         {
+            // Random wall variation
+
             switch (new Random().Next(0, 6))
             {
                 case 0:

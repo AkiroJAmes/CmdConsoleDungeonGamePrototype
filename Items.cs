@@ -90,9 +90,12 @@ namespace AdventureGame
                 return false;
             }
 
+            // Make sure hp doesnt go over max hp
 
             player.Hp += 5;
             if (player.Hp >= player.MaxHP) player.Hp = player.MaxHP;
+
+            // Removing item and resetting qty
 
             this.QTY -= 1;
 
@@ -108,13 +111,6 @@ namespace AdventureGame
 
             return true;
         }
-
-/*        public override void Draw()
-        {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write("U ");
-            Console.ResetColor();
-        }*/
     }
 
     class GreaterHealthPotion : PickUpItem
@@ -141,9 +137,10 @@ namespace AdventureGame
                 return false;
             }
 
-
             player.Hp = player.MaxHP;
-            
+
+            // Removing item and resetting qty
+
             this.QTY -= 1;
 
             if (this.QTY <= 0)
@@ -159,13 +156,6 @@ namespace AdventureGame
 
             return true;
         }
-
-        /*        public override void Draw()
-                {
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
-                    Console.Write("U ");
-                    Console.ResetColor();
-                }*/
     }
 
     class Key : PickUpItem
@@ -186,14 +176,20 @@ namespace AdventureGame
 
         public override bool UseItem(Player player, PickUpItem item, Program.GameState gameState)
         {
-            this.Qty--;
+            if(gameState == Program.GameState.InInventory) {
+                this.Qty--;
 
-            if(Qty <= 0) {
-                player.RemoveItem(item);
-                Qty = 1;
+                if (Qty <= 0)
+                {
+                    player.RemoveItem(item);
+                    Qty = 1;
+                }
+
+                return true;
             }
 
-            return true;
+            Console.Write("Can't use that here");
+            return false;
         }
 
         public override void Draw()

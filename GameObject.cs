@@ -36,8 +36,6 @@ namespace AdventureGame
 
         public virtual bool IsKeyWall() { return false; }
 
-        public virtual GameObject GetGameObject() { return this; }
-
         public virtual bool IsAlive() { return false; }
 
         public Vector2 GetGameObjectPosition()

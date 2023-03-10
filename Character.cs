@@ -121,10 +121,12 @@ namespace AdventureGame
             float exponent = 1.5f;
             float baseEXP = 5f;
 
+            // Basic calc for next level
             return (int)Math.Round(baseEXP * (MathF.Pow(Lvl, exponent)));
         }
 
         public int GetEXP() {
+            // Check for level up
             if (EXP >= NextLevel()) {
                 EXP -=NextLevel();
                 UpdateLVL();
@@ -159,6 +161,7 @@ namespace AdventureGame
         }
 
         public void AddEXP(int exp) {
+            // Add exp then check if level up is happening 
             EXP += exp;
             TOTAL_EXP += exp;
             GetEXP();
@@ -183,7 +186,7 @@ namespace AdventureGame
             {
                 if(item.Name == removeItem.Name) {
                     ITEMS.Remove(item);
-                    if(Program.gameState == GameState.InInventory)
+                    if(gameState == GameState.InInventory)
                         Console.Clear();
                     return;
                 }

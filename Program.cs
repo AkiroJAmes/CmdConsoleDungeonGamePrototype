@@ -156,6 +156,8 @@ namespace AdventureGame
         private static void CreateNewMap()
         {
             if (gameState == GameState.Escaped || gameState == GameState.NewGame) {
+                // Gen a new map at start and when escaped previous map
+
                 levelTrack++;
                 var mapsRef = maps;
                 maps = new object[maps.Length + 1];
@@ -179,6 +181,8 @@ namespace AdventureGame
 
             if (gameState == GameState.NewGame || gameState == GameState.Escaped)
             {
+                // Generate the map with objects
+
                 CreateDungeonRooms();
                 var r = new Random();
                 e = new Enemy[r.Next(2*(int)MathF.Pow(maps.Length, 0.5f), 2*(int)MathF.Pow(maps.Length, 0.5f))];
@@ -187,6 +191,7 @@ namespace AdventureGame
 
                 AddGameObjects(pu, pui);
 
+                // Start independent enemy movement timer
                 InitTimer();
             }
 
@@ -250,7 +255,7 @@ namespace AdventureGame
                 case ConsoleKey.Z:
                 case ConsoleKey.F:
                 case ConsoleKey.Enter:
-                    PickUpNewItem(pPosition);
+                    CheckInteraction(pPosition);
                     break;
                 case ConsoleKey.F1:
                     p.AddEXP(10);
@@ -271,7 +276,7 @@ namespace AdventureGame
                     return true;
             }
 
-
+            // Check for exit
             if (newPlayerPosition.X == rowUserInputSize)
             {
                 gameState = GameState.Escaped;
@@ -296,6 +301,8 @@ namespace AdventureGame
                 return true;
             }
 
+            // Move player after checks to avoid overlap conflicts 
+
             switch (actionUserInput)
             {
                 case ConsoleKey.UpArrow:
@@ -310,6 +317,8 @@ namespace AdventureGame
                     map[(int)newPlayerPosition.X, (int)newPlayerPosition.Y].AddGameObject(p, (int)newPlayerPosition.X, (int)newPlayerPosition.Y);
                     break;
             }
+
+            // Enemy checks
 
             if (!mapPosition.CheckIfEmpty() && gameState != GameState.InBattle)
             {
@@ -413,6 +422,8 @@ namespace AdventureGame
                         {
                             switch (enemy.MySpecies)
                             {
+                                // Why is diagonal movement so complicated
+
                                 case Enemy.Species.Spider:
                                     if (playerPosition.Y < currentPosition.Y && playerPosition.X > currentPosition.X)
                                     {
@@ -563,6 +574,8 @@ namespace AdventureGame
                 Console.Clear();
                 DrawBattleScreen(enemy);
 
+                // Advantage enemy and mimic go first
+
                 if(advantage == enemy || enemy.MySpecies == Enemy.Species.Mimic) {
                     AddBattleMessageHistory($"{enemy.Name} has first turn", true);
                     EnemyBattleAction(EnemyBattleState.Attack, BattleOption.Attack, true, enemy);
@@ -631,6 +644,8 @@ namespace AdventureGame
 
                     var key = Console.ReadKey(true).Key;
 
+                    // Options highlight
+
                     switch (key)
                     {
                         case ConsoleKey.UpArrow:
@@ -663,6 +678,8 @@ namespace AdventureGame
 
         private static void BattleAction(BattleOption currentBattleOption, Enemy enemy)
         {
+            // Check enemy action first to see if they defend 
+
             var enemyAction = EnemyBattleAction(enemy.Ai);
 
             if (enemyAction == EnemyBattleState.Defend && currentBattleOption != BattleOption.Item) {
@@ -861,6 +878,8 @@ namespace AdventureGame
 
         private static void PlayerDead(bool dispose)
         {
+            // Don't dispose if enemy started fight otherwise it crashed
+
             if(dispose)
                 timer.Dispose();
 
@@ -870,7 +889,7 @@ namespace AdventureGame
             Console.ReadKey(true);
         }
 
-        static void PickUpNewItem(Vector2 pPosition)
+        static void CheckInteraction(Vector2 pPosition)
         {
             var mapPosition = map[(int)pPosition.X, (int)pPosition.Y];
             var item = mapPosition.CheckIfItem();
@@ -1048,7 +1067,7 @@ namespace AdventureGame
                 }
             }
 
-            // Add powerups
+            // Add powerups : They do nothing
             for (int i = 0; i < pu.Length; i++) {
                 pu[i] = new PowerUp();
 
